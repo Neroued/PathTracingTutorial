@@ -1,6 +1,6 @@
 # OpenGL 路径追踪 -- Part 0：开始前准备
 
-![](.\img\pt.png)
+![](img/pt.png)
 
 ## 一、前言
 
@@ -139,7 +139,7 @@ private:
 
 计算着色器可以利用GPU在给定的内存区域上进行特定操作。计算着色器没有直接的输入与输出方式，需要通过例如创建SSBO(Shader Storage Buffer Object)的方式来读写数据。
 
-![图片来自LearnOpenGL](.\img\global_work_groups.png)
+![图片来自LearnOpenGL](/img/global_work_groups.png)
 
 计算着色器可以充分的利用GPU的并行计算能力。首先需要引入”工作组“的概念。工作组是GPU并行计算的基本组织单位，每个工作组内存在一系列线程。工作组本身的维度是三维的。它在X, Y, Z方向上都分别有一定数量的工作线程。将需要处理的数据视为一个三维的长方体，每个工作组处理长方体中的一个小长方体，因此总的工作组的维度也是三维的。
 
@@ -278,7 +278,7 @@ void main()
 
 我们会得到这样的输出：
 
-![](.\img\helloworld.png)
+![](/img/helloworld.png)
 
 ## 四、总结
 
