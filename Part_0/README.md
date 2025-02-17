@@ -1,6 +1,6 @@
 # OpenGL 路径追踪 -- Part 0：开始前准备
 
-![](img/pt.png)
+![](./img/pt.png)
 
 ## 一、前言
 
@@ -9,8 +9,9 @@
 - [LearnOpenGL](https://learnopengl.com/) 经典的OpenGL入门教程，若从未接触过OpenGL的api，可以从这里学习。
 - AKGWSB 大佬的 [EzRT](https://github.com/AKGWSB/EzRT) 教程，详实且一步步推进，本系列之中很多内容都来自这位大佬的博客，如果读者认为我写的太烂，可以直接移步大佬的博客，那里会有更好的。
 - [pbrt](https://github.com/mmp/pbrt-v4) 的官方代码仓库。图形学经典书籍的代码仓库，里面可以找到很多经典的算法实现。
-- 以及我本人的代码仓库，这个系列的代码都会上传到这个仓库。
 - 还有更多会在将来补充...
+
+这是[我本人的代码仓库](https://github.com/Neroued/PathTracingTutorial)，这个系列的代码都会上传到这个仓库。
 
 我选择OpenGL作为图形api，使用其在4.3版本之后提供的compute shader实现在GPU上加速计算。为了减少在代码封装与抽象上的工作量，我选择Qt作为框架，以下是我编写代码时的环境：
 
@@ -139,7 +140,7 @@ private:
 
 计算着色器可以利用GPU在给定的内存区域上进行特定操作。计算着色器没有直接的输入与输出方式，需要通过例如创建SSBO(Shader Storage Buffer Object)的方式来读写数据。
 
-![图片来自LearnOpenGL](/img/global_work_groups.png)
+![图片来自LearnOpenGL](./img/global_work_groups.png)
 
 计算着色器可以充分的利用GPU的并行计算能力。首先需要引入”工作组“的概念。工作组是GPU并行计算的基本组织单位，每个工作组内存在一系列线程。工作组本身的维度是三维的。它在X, Y, Z方向上都分别有一定数量的工作线程。将需要处理的数据视为一个三维的长方体，每个工作组处理长方体中的一个小长方体，因此总的工作组的维度也是三维的。
 
@@ -278,7 +279,7 @@ void main()
 
 我们会得到这样的输出：
 
-![](/img/helloworld.png)
+![](./img/helloworld.png)
 
 ## 四、总结
 
