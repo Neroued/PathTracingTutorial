@@ -1,33 +1,22 @@
 #include <ptScene.h>
-#include <qDebug>
+#include <QDebug>
 
-ptScene::ptScene(QWidget *parent)
-    : QOpenGLWidget(parent),
-      m_computeProgram(nullptr),
-      m_mixProgram(nullptr),
-      m_renderProgram(nullptr),
-      m_computeTexture(0),
-      m_imageTexture(0),
-      m_screenVBO(QOpenGLBuffer::VertexBuffer),
-      m_width(800),
-      m_height(800)
-{
+ptScene::ptScene(QWidget* parent)
+    : QOpenGLWidget(parent), m_computeProgram(nullptr), m_mixProgram(nullptr), m_renderProgram(nullptr), m_computeTexture(0), m_imageTexture(0),
+      m_screenVBO(QOpenGLBuffer::VertexBuffer), m_width(800), m_height(800) {
     resize(m_width, m_height);
 }
 
-ptScene::~ptScene()
-{
+ptScene::~ptScene() {
     makeCurrent();
 
     m_screenVAO.destroy();
     m_screenVBO.destroy();
-    if (m_computeTexture)
-    {
+    if (m_computeTexture) {
         glDeleteTextures(1, &m_computeTexture);
         m_computeTexture = 0;
     }
-    if (m_imageTexture)
-    {
+    if (m_imageTexture) {
         glDeleteTextures(1, &m_imageTexture);
         m_imageTexture = 0;
     }
@@ -37,8 +26,7 @@ ptScene::~ptScene()
     doneCurrent();
 }
 
-void ptScene::initializeGL()
-{
+void ptScene::initializeGL() {
     // -----------------
     // 初始化 OpenGL 函数
     // -----------------
@@ -61,18 +49,15 @@ void ptScene::initializeGL()
     initializeQuad();
 }
 
-void ptScene::resizeGL(int w, int h)
-{
-    m_width = w;
+void ptScene::resizeGL(int w, int h) {
+    m_width  = w;
     m_height = h;
 
-    if (m_computeTexture)
-    {
+    if (m_computeTexture) {
         glDeleteTextures(1, &m_computeTexture);
         m_computeTexture = 0;
     }
-    if (m_imageTexture)
-    {
+    if (m_imageTexture) {
         glDeleteTextures(1, &m_imageTexture);
         m_imageTexture = 0;
     }
@@ -87,8 +72,7 @@ void ptScene::resizeGL(int w, int h)
     glViewport(0, 0, w, h);
 }
 
-void ptScene::paintGL()
-{
+void ptScene::paintGL() {
     // -------------------------------
     // 1. 调度计算着色器更新纹理
     // -------------------------------
@@ -111,19 +95,16 @@ void ptScene::paintGL()
     update();
 }
 
-void ptScene::compileShaders()
-{
+void ptScene::compileShaders() {
     // -----------------
     // 编译计算着色器程序
     // -----------------
     m_computeProgram = new QOpenGLShaderProgram();
-    if (!m_computeProgram->addShaderFromSourceFile(QOpenGLShader::Compute, "E:/code/c++/pathTracingTutorial/Part_1/shaders/pt_compute.glsl"))
-    {
+    if (!m_computeProgram->addShaderFromSourceFile(QOpenGLShader::Compute, "/home/neroued/PathTracingTutorial/Part_1/shaders/pt_compute.glsl")) {
         qWarning() << "Failed to compile compute shader:" << m_computeProgram->log();
         return;
     }
-    if (!m_computeProgram->link())
-    {
+    if (!m_computeProgram->link()) {
         qWarning() << "Failed to link compute shader program:" << m_computeProgram->log();
         return;
     }
@@ -132,13 +113,11 @@ void ptScene::compileShaders()
     // 编译混合着色器程序
     // -----------------
     m_mixProgram = new QOpenGLShaderProgram();
-    if (!m_mixProgram->addShaderFromSourceFile(QOpenGLShader::Compute, "E:/code/c++/pathTracingTutorial/Part_1/shaders/pt_mix.glsl"))
-    {
+    if (!m_mixProgram->addShaderFromSourceFile(QOpenGLShader::Compute, "/home/neroued/PathTracingTutorial/Part_1/shaders/pt_mix.glsl")) {
         qWarning() << "Failed to compile compute shader:" << m_mixProgram->log();
         return;
     }
-    if (!m_mixProgram->link())
-    {
+    if (!m_mixProgram->link()) {
         qWarning() << "Failed to link compute shader program:" << m_mixProgram->log();
         return;
     }
@@ -147,18 +126,15 @@ void ptScene::compileShaders()
     // 编译顶点与片段着色器程序
     // ----------------------
     m_renderProgram = new QOpenGLShaderProgram();
-    if (!m_renderProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, "E:/code/c++/pathTracingTutorial/Part_1/shaders/pt_vertex.glsl"))
-    {
+    if (!m_renderProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, "/home/neroued/PathTracingTutorial/Part_1/shaders/pt_vertex.glsl")) {
         qWarning() << "Failed to compile vertex shader:" << m_renderProgram->log();
         return;
     }
-    if (!m_renderProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, "E:/code/c++/pathTracingTutorial/Part_1/shaders/pt_fragment.glsl"))
-    {
+    if (!m_renderProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, "/home/neroued/PathTracingTutorial/Part_1/shaders/pt_fragment.glsl")) {
         qWarning() << "Failed to compile fragment shader:" << m_renderProgram->log();
         return;
     }
-    if (!m_renderProgram->link())
-    {
+    if (!m_renderProgram->link()) {
         qWarning() << "Failed to link render shader program:" << m_renderProgram->log();
         return;
     }
@@ -166,10 +142,8 @@ void ptScene::compileShaders()
     qDebug() << "Successfully compiled shaders";
 }
 
-void ptScene::createTexture(GLuint *texture, int width, int height, GLuint unit)
-{
-    if (*texture)
-    {
+void ptScene::createTexture(GLuint* texture, int width, int height, GLuint unit) {
+    if (*texture) {
         glDeleteTextures(1, texture);
         *texture = 0;
     }
@@ -200,8 +174,7 @@ void ptScene::createTexture(GLuint *texture, int width, int height, GLuint unit)
     glBindImageTexture(unit, *texture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 }
 
-void ptScene::computeShaderPass()
-{
+void ptScene::computeShaderPass() {
     m_computeProgram->bind();
 
     // 计算工作组数，保证覆盖整个纹理区域（计算着色器中 local_size 为 16×16）
@@ -215,8 +188,7 @@ void ptScene::computeShaderPass()
     m_computeProgram->release();
 }
 
-void ptScene::mixShaderPass()
-{
+void ptScene::mixShaderPass() {
     m_mixProgram->bind();
 
     // 传入帧计数
@@ -231,11 +203,9 @@ void ptScene::mixShaderPass()
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
     m_mixProgram->release();
-
 }
 
-void ptScene::renderShaderPass()
-{
+void ptScene::renderShaderPass() {
     // 使用着色器绘制全屏四边形并采样compute shader计算的texture
     m_renderProgram->bind();
     glClear(GL_COLOR_BUFFER_BIT);
@@ -253,18 +223,17 @@ void ptScene::renderShaderPass()
     m_renderProgram->release();
 }
 
-void ptScene::initializeQuad()
-{
+void ptScene::initializeQuad() {
     // 定义全屏四边形的顶点数据（6 个顶点，每个顶点包含 2 个位置与 2 个纹理坐标）
     float quadVertices[] = {
         // 位置      // 纹理坐标
-        -1.0f, 1.0f, 0.0f, 1.0f,  // 左上
+        -1.0f, 1.0f,  0.0f, 1.0f, // 左上
         -1.0f, -1.0f, 0.0f, 0.0f, // 左下
-        1.0f, -1.0f, 1.0f, 0.0f,  // 右下
+        1.0f,  -1.0f, 1.0f, 0.0f, // 右下
 
-        -1.0f, 1.0f, 0.0f, 1.0f, // 左上
-        1.0f, -1.0f, 1.0f, 0.0f, // 右下
-        1.0f, 1.0f, 1.0f, 1.0f   // 右上
+        -1.0f, 1.0f,  0.0f, 1.0f, // 左上
+        1.0f,  -1.0f, 1.0f, 0.0f, // 右下
+        1.0f,  1.0f,  1.0f, 1.0f  // 右上
     };
 
     // 初始化 VAO
@@ -279,10 +248,10 @@ void ptScene::initializeQuad()
     // 设置顶点属性
     // 属性 0：位置（2 个浮点数），偏移 0，步长为 4*sizeof(float)
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), reinterpret_cast<void *>(0));
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), reinterpret_cast<void*>(0));
     // 属性 1：纹理坐标（2 个浮点数），偏移为 2*sizeof(float)
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), reinterpret_cast<void *>(2 * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), reinterpret_cast<void*>(2 * sizeof(float)));
 
     m_screenVAO.release();
 }
