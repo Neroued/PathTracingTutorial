@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cuda_gl_interop.h>
+#include <driver_types.h>
 #include <Material.h>
 #include <Primitive.h>
 #include <QOpenGLBuffer>
@@ -24,6 +26,7 @@ protected:
 private:
     void compileShaders();                                                   // 编译所需的着色器
 
+    void cudaPass();                                                         // 计算pass
     void computeShaderPass();                                                // 计算pass，进行路径追踪的pass
     void mixShaderPass();                                                    // 混合pass，将新的结果与之前的混合
     void renderShaderPass();                                                 // 渲染pass，展示计算结果的pass
@@ -32,6 +35,8 @@ private:
 
     void initializeQuad();                                                   // 初始化全屏四边形
     void createTexture(GLuint* texture, int width, int height, GLuint unit); // 创建材质
+
+    void checkCudaErrors(cudaError_t err, const char* msg);
 
 private:
     QOpenGLShaderProgram* m_computeProgram; // 计算着色器
@@ -43,6 +48,9 @@ private:
 
     GLuint m_computeTexture; // 存放计算结果的材质
     GLuint m_imageTexture;   // 存储历史结果的材质
+    GLuint m_cudaTexture;    // cuda 计算所用的材质
+
+    cudaGraphicsResource* m_cudaResource;
 
     int m_width, m_height;
     GLuint m_frameCount = 0;
