@@ -11,6 +11,5 @@ CompileFlags:
     - '-Xcompiler=-fPIC'
     - '--generate-code=arch=compute_89,code=[compute_89,sm_89]'
   Add:
-    - '-std=c++17'
+    - '-std=c++20'
     - '--cuda-gpu-arch=sm_89'
-  Compiler: g++

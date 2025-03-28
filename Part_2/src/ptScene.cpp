@@ -1,16 +1,14 @@
+#include <ptScene.h>
 #include <cuda_gl_interop.h>
 #include <cuda_runtime_api.h>
 #include <driver_types.h>
-#include <GL/gl.h>
-#include <ptScene.h>
 #include <QDebug>
-#include <qlogging.h>
 #include <surface_types.h>
 #include <vector_types.h>
 
 ptScene::ptScene(QWidget* parent)
-    : QOpenGLWidget(parent), m_computeProgram(nullptr), m_mixProgram(nullptr), m_renderProgram(nullptr), m_computeTexture(0), m_imageTexture(0),
-      m_cudaTexture(0), m_cudaResource(nullptr), m_screenVBO(QOpenGLBuffer::VertexBuffer), m_width(800), m_height(800) {
+    : QOpenGLWidget(parent), m_renderProgram(nullptr), m_computeTexture(0), m_imageTexture(0), m_computeResource(nullptr), m_imageResource(nullptr),
+      m_screenVBO(QOpenGLBuffer::VertexBuffer), m_width(800), m_height(800) {
     resize(m_width, m_height);
 }
 
@@ -27,16 +25,17 @@ ptScene::~ptScene() {
         glDeleteTextures(1, &m_imageTexture);
         m_imageTexture = 0;
     }
-    if (m_cudaTexture) {
-        glDeleteTextures(1, &m_cudaTexture);
-        m_cudaTexture = 0;
-    }
-    delete m_computeProgram;
+
     delete m_renderProgram;
 
-    if (m_cudaResource) {
-        checkCudaErrors(cudaGraphicsUnregisterResource(m_cudaResource), "cudaGraphicsUnregisterResource");
-        m_cudaResource = nullptr;
+    if (m_computeResource) {
+        checkCudaErrors(cudaGraphicsUnregisterResource(m_computeResource), "cudaGraphicsUnregisterResource");
+        m_computeResource = nullptr;
+    }
+
+    if (m_imageResource) {
+        checkCudaErrors(cudaGraphicsUnregisterResource(m_imageResource), "cudaGraphicsUnregisterResource");
+        m_imageResource = nullptr;
     }
 
     doneCurrent();
@@ -58,10 +57,12 @@ void ptScene::initializeGL() {
     // ------------------------
     createTexture(&m_computeTexture, m_width, m_height, 0); // binding = 0
     createTexture(&m_imageTexture, m_width, m_height, 1);   // binding = 1
-    createTexture(&m_cudaTexture, m_width, m_height, 2);    // binding = 2
 
     // 将纹理注册到 cuda
-    checkCudaErrors(cudaGraphicsGLRegisterImage(&m_cudaResource, m_cudaTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore),
+    checkCudaErrors(cudaGraphicsGLRegisterImage(&m_computeResource, m_computeTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore),
+                    "cudaGraphicsGLRegisterImage");
+
+    checkCudaErrors(cudaGraphicsGLRegisterImage(&m_imageResource, m_imageTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore),
                     "cudaGraphicsGLRegisterImage");
 
     // -------------------------------
@@ -82,24 +83,26 @@ void ptScene::resizeGL(int w, int h) {
         glDeleteTextures(1, &m_imageTexture);
         m_imageTexture = 0;
     }
-    if (m_cudaTexture) {
-        glDeleteTextures(1, &m_cudaTexture);
-        m_cudaTexture = 0;
-    }
 
     // 生成新的纹理
     createTexture(&m_computeTexture, m_width, m_height, 0);
     createTexture(&m_imageTexture, m_width, m_height, 1);
-    createTexture(&m_cudaTexture, m_width, m_height, 2);
 
-    if (m_cudaResource) {
-        checkCudaErrors(cudaGraphicsUnregisterResource(m_cudaResource), "cudaGraphicsUnregisterResource");
-        m_cudaResource = nullptr;
+    if (m_computeResource) {
+        checkCudaErrors(cudaGraphicsUnregisterResource(m_computeResource), "cudaGraphicsUnregisterResource");
+        m_computeResource = nullptr;
     }
+    if (m_imageResource) {
+        checkCudaErrors(cudaGraphicsUnregisterResource(m_imageResource), "cudaGraphicsUnregisterResource");
+        m_imageResource = nullptr;
+    }
+
     // 将纹理注册到 cuda
-    checkCudaErrors(cudaGraphicsGLRegisterImage(&m_cudaResource, m_cudaTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore),
+    checkCudaErrors(cudaGraphicsGLRegisterImage(&m_computeResource, m_computeTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore),
                     "cudaGraphicsGLRegisterImage");
 
+    checkCudaErrors(cudaGraphicsGLRegisterImage(&m_imageResource, m_imageTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore),
+                    "cudaGraphicsGLRegisterImage");
     // 重置帧计数
     m_frameCount = 0;
 
@@ -110,13 +113,12 @@ void ptScene::paintGL() {
     // -------------------------------
     // 1. 调度计算着色器更新纹理
     // -------------------------------
-    // computeShaderPass();
-    cudaPass();
+    computePass();
 
     // -------------------------
     // 2. 将新计算结果与之前的混合
     // -------------------------
-    mixShaderPass();
+    mixPass();
 
     // -------------------------------
     // 3. 渲染全屏四边形，显示计算结果纹理
@@ -131,41 +133,15 @@ void ptScene::paintGL() {
 }
 
 void ptScene::compileShaders() {
-    // -----------------
-    // 编译计算着色器程序
-    // -----------------
-    m_computeProgram = new QOpenGLShaderProgram();
-    if (!m_computeProgram->addShaderFromSourceFile(QOpenGLShader::Compute, "/home/neroued/PathTracingTutorial/Part_2/shaders/pt_compute.glsl")) {
-        qWarning() << "Failed to compile compute shader:" << m_computeProgram->log();
-        return;
-    }
-    if (!m_computeProgram->link()) {
-        qWarning() << "Failed to link compute shader program:" << m_computeProgram->log();
-        return;
-    }
-
-    // -----------------
-    // 编译混合着色器程序
-    // -----------------
-    m_mixProgram = new QOpenGLShaderProgram();
-    if (!m_mixProgram->addShaderFromSourceFile(QOpenGLShader::Compute, "/home/neroued/PathTracingTutorial/Part_2/shaders/pt_mix.glsl")) {
-        qWarning() << "Failed to compile compute shader:" << m_mixProgram->log();
-        return;
-    }
-    if (!m_mixProgram->link()) {
-        qWarning() << "Failed to link compute shader program:" << m_mixProgram->log();
-        return;
-    }
-
     // ----------------------
     // 编译顶点与片段着色器程序
     // ----------------------
     m_renderProgram = new QOpenGLShaderProgram();
-    if (!m_renderProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, "/home/neroued/PathTracingTutorial/Part_2/shaders/pt_vertex.glsl")) {
+    if (!m_renderProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, "E:\\code\\c++\\PathTracingTutorial\\Part_2\\shaders\\pt_vertex.glsl")) {
         qWarning() << "Failed to compile vertex shader:" << m_renderProgram->log();
         return;
     }
-    if (!m_renderProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, "/home/neroued/PathTracingTutorial/Part_2/shaders/pt_fragment.glsl")) {
+    if (!m_renderProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, "E:\\code\\c++\\PathTracingTutorial\\Part_2\\shaders\\pt_fragment.glsl")) {
         qWarning() << "Failed to compile fragment shader:" << m_renderProgram->log();
         return;
     }
@@ -209,30 +185,16 @@ void ptScene::createTexture(GLuint* texture, int width, int height, GLuint unit)
     glBindImageTexture(unit, *texture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 }
 
-void ptScene::computeShaderPass() {
-    m_computeProgram->bind();
-
-    // 计算工作组数，保证覆盖整个纹理区域（计算着色器中 local_size 为 16×16）
-    GLuint groupX = (m_width + 15) / 16;
-    GLuint groupY = (m_height + 15) / 16;
-    glDispatchCompute(groupX, groupY, 1);
-
-    // 内存屏障，确保计算着色器写入完成后 fragment shader 能正确采样
-    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-    m_computeProgram->release();
-}
-
 // pathTracingKernel.cu 提供的接口, 调用 __global__ 函数
 extern "C" void launchKernel(cudaSurfaceObject_t surface, int width, int height);
 
-void ptScene::cudaPass() {
+void ptScene::computePass() {
     // 将 OpenGL 的纹理资源映射到 CUDA
-    checkCudaErrors(cudaGraphicsMapResources(1, &m_cudaResource, 0), "cudaGraphicsMapResources");
+    checkCudaErrors(cudaGraphicsMapResources(1, &m_computeResource, 0), "cudaGraphicsMapResources");
 
     // 获取映射后的 cudaArray
     cudaArray_t textureArray;
-    checkCudaErrors(cudaGraphicsSubResourceGetMappedArray(&textureArray, m_cudaResource, 0, 0), "cudaGraphicsSubResourceGetMappedArray");
+    checkCudaErrors(cudaGraphicsSubResourceGetMappedArray(&textureArray, m_computeResource, 0, 0), "cudaGraphicsSubResourceGetMappedArray");
 
     // 创建资源描述符
     cudaResourceDesc resDesc;
@@ -251,24 +213,45 @@ void ptScene::cudaPass() {
     checkCudaErrors(cudaDestroySurfaceObject(surfaceObj), "cudaDestroySurfaceObject");
 
     // 解除资源映射
-    checkCudaErrors(cudaGraphicsUnmapResources(1, &m_cudaResource, 0), "cudaGraphicsUnmapResources");
+    checkCudaErrors(cudaGraphicsUnmapResources(1, &m_computeResource, 0), "cudaGraphicsUnmapResources");
 }
 
-void ptScene::mixShaderPass() {
-    m_mixProgram->bind();
+extern "C" void launchMixKernel(cudaSurfaceObject_t surfaceNew, cudaSurfaceObject_t surfaceAcc, int width, int height, unsigned int sampleCount);
 
-    // 传入帧计数
-    glUniform1ui(glGetUniformLocation(m_mixProgram->programId(), "sampleCount"), m_frameCount + 1);
+void ptScene::mixPass() {
+    // 将 OpenGL 的纹理资源映射到 CUDA
+    checkCudaErrors(cudaGraphicsMapResources(1, &m_computeResource, 0), "cudaGraphicsMapResources");
+    checkCudaErrors(cudaGraphicsMapResources(1, &m_imageResource, 0), "cudaGraphicsMapResources");
 
-    // 计算工作组数，保证覆盖整个纹理区域（计算着色器中 local_size 为 16×16）
-    GLuint groupX = (m_width + 15) / 16;
-    GLuint groupY = (m_height + 15) / 16;
-    glDispatchCompute(groupX, groupY, 1);
+    // 获取映射后的 cudaArray
+    cudaArray_t computeArray, imageAray;
+    checkCudaErrors(cudaGraphicsSubResourceGetMappedArray(&computeArray, m_computeResource, 0, 0), "cudaGraphicsSubResourceGetMappedArray");
+    checkCudaErrors(cudaGraphicsSubResourceGetMappedArray(&imageAray, m_imageResource, 0, 0), "cudaGraphicsSubResourceGetMappedArray");
 
-    // 内存屏障，确保计算着色器写入完成后 fragment shader 能正确采样
-    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    // 创建资源描述符
+    cudaResourceDesc computeResDesc, imageResDesc;
+    memset(&computeResDesc, 0, sizeof(computeResDesc));
+    memset(&imageResDesc, 0, sizeof(imageResDesc));
+    computeResDesc.resType = imageResDesc.resType = cudaResourceTypeArray;
+    computeResDesc.res.array.array                = computeArray;
+    imageResDesc.res.array.array                  = imageAray;
 
-    m_mixProgram->release();
+    // 创建 CUDA surface 对象
+    cudaSurfaceObject_t computeSurfaceObj = 0;
+    cudaSurfaceObject_t imageSurfaceObj   = 0;
+    checkCudaErrors(cudaCreateSurfaceObject(&computeSurfaceObj, &computeResDesc), "cudaCreateSurfaceObject");
+    checkCudaErrors(cudaCreateSurfaceObject(&imageSurfaceObj, &imageResDesc), "cudaCreateSurfaceObject");
+
+    // 启动 CUDA kernel
+    launchMixKernel(computeSurfaceObj, imageSurfaceObj, m_width, m_height, m_frameCount + 1);
+
+    // 销毁 surface 对象
+    checkCudaErrors(cudaDestroySurfaceObject(computeSurfaceObj), "cudaDestroySurfaceObject");
+    checkCudaErrors(cudaDestroySurfaceObject(imageSurfaceObj), "cudaDestroySurfaceObject");
+
+    // 解除资源映射
+    checkCudaErrors(cudaGraphicsUnmapResources(1, &m_computeResource, 0), "cudaGraphicsUnmapResources");
+    checkCudaErrors(cudaGraphicsUnmapResources(1, &m_imageResource, 0), "cudaGraphicsUnmapResources");
 }
 
 void ptScene::renderShaderPass() {
