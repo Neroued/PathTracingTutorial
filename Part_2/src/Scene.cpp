@@ -1,18 +1,18 @@
-#include <ptScene.h>
+#include <Scene.h>
+#include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
-#include <cuda_runtime_api.h>
-#include <driver_types.h>
 #include <QDebug>
-#include <surface_types.h>
-#include <vector_types.h>
+#include <cudaKernelFunctions.h>
 
-ptScene::ptScene(QWidget* parent)
+BEGIN_NAMESPACE_PT
+
+Scene::Scene(QWidget* parent)
     : QOpenGLWidget(parent), m_renderProgram(nullptr), m_computeTexture(0), m_imageTexture(0), m_computeResource(nullptr), m_imageResource(nullptr),
       m_screenVBO(QOpenGLBuffer::VertexBuffer), m_width(800), m_height(800) {
     resize(m_width, m_height);
 }
 
-ptScene::~ptScene() {
+Scene::~Scene() {
     makeCurrent();
 
     m_screenVAO.destroy();
@@ -41,7 +41,7 @@ ptScene::~ptScene() {
     doneCurrent();
 }
 
-void ptScene::initializeGL() {
+void Scene::initializeGL() {
     // -----------------
     // 初始化 OpenGL 函数
     // -----------------
@@ -71,7 +71,7 @@ void ptScene::initializeGL() {
     initializeQuad();
 }
 
-void ptScene::resizeGL(int w, int h) {
+void Scene::resizeGL(int w, int h) {
     m_width  = w;
     m_height = h;
 
@@ -109,9 +109,9 @@ void ptScene::resizeGL(int w, int h) {
     glViewport(0, 0, w, h);
 }
 
-void ptScene::paintGL() {
+void Scene::paintGL() {
     // -------------------------------
-    // 1. 调度计算着色器更新纹理
+    // 1. 调度计算核心更新纹理
     // -------------------------------
     computePass();
 
@@ -132,7 +132,7 @@ void ptScene::paintGL() {
     update();
 }
 
-void ptScene::compileShaders() {
+void Scene::compileShaders() {
     // ----------------------
     // 编译顶点与片段着色器程序
     // ----------------------
@@ -153,7 +153,7 @@ void ptScene::compileShaders() {
     qDebug() << "Successfully compiled shaders";
 }
 
-void ptScene::createTexture(GLuint* texture, int width, int height, GLuint unit) {
+void Scene::createTexture(GLuint* texture, int width, int height, GLuint unit) {
     if (*texture) {
         glDeleteTextures(1, texture);
         *texture = 0;
@@ -185,10 +185,7 @@ void ptScene::createTexture(GLuint* texture, int width, int height, GLuint unit)
     glBindImageTexture(unit, *texture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 }
 
-// pathTracingKernel.cu 提供的接口, 调用 __global__ 函数
-extern "C" void launchKernel(cudaSurfaceObject_t surface, int width, int height);
-
-void ptScene::computePass() {
+void Scene::computePass() {
     // 将 OpenGL 的纹理资源映射到 CUDA
     checkCudaErrors(cudaGraphicsMapResources(1, &m_computeResource, 0), "cudaGraphicsMapResources");
 
@@ -216,9 +213,7 @@ void ptScene::computePass() {
     checkCudaErrors(cudaGraphicsUnmapResources(1, &m_computeResource, 0), "cudaGraphicsUnmapResources");
 }
 
-extern "C" void launchMixKernel(cudaSurfaceObject_t surfaceNew, cudaSurfaceObject_t surfaceAcc, int width, int height, unsigned int sampleCount);
-
-void ptScene::mixPass() {
+void Scene::mixPass() {
     // 将 OpenGL 的纹理资源映射到 CUDA
     checkCudaErrors(cudaGraphicsMapResources(1, &m_computeResource, 0), "cudaGraphicsMapResources");
     checkCudaErrors(cudaGraphicsMapResources(1, &m_imageResource, 0), "cudaGraphicsMapResources");
@@ -254,7 +249,7 @@ void ptScene::mixPass() {
     checkCudaErrors(cudaGraphicsUnmapResources(1, &m_imageResource, 0), "cudaGraphicsUnmapResources");
 }
 
-void ptScene::renderShaderPass() {
+void Scene::renderShaderPass() {
     // 使用着色器绘制全屏四边形并采样compute shader计算的texture
     m_renderProgram->bind();
     glClear(GL_COLOR_BUFFER_BIT);
@@ -272,7 +267,7 @@ void ptScene::renderShaderPass() {
     m_renderProgram->release();
 }
 
-void ptScene::initializeQuad() {
+void Scene::initializeQuad() {
     // 定义全屏四边形的顶点数据（6 个顶点，每个顶点包含 2 个位置与 2 个纹理坐标）
     float quadVertices[] = {
         // 位置      // 纹理坐标
@@ -305,9 +300,15 @@ void ptScene::initializeQuad() {
     m_screenVAO.release();
 }
 
-void ptScene::checkCudaErrors(cudaError_t err, const char* msg) {
+void Scene::checkCudaErrors(cudaError_t err, const char* msg) {
     if (err != cudaSuccess) {
         qFatal() << "CUDA Error:" << msg << "\n    Code:" << static_cast<int>(err) << "\n    Name:" << cudaGetErrorName(err)
                  << "\n    Description:" << cudaGetErrorString(err);
     }
 }
+
+void Scene::initCudaConstants() {
+
+}
+
+END_NAMESPACE_PT

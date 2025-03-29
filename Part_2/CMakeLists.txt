@@ -33,16 +33,17 @@ qt_standard_project_setup()
 
 # ========== 源文件与头文件 ==========
 set(CPP_SOURCES
-    src/ptScene.cpp
+    src/Scene.cpp
     tests/PathTracing.cpp)
 
 set(HEADERS
-    include/ptScene.h
+    include/Scene.h
     include/Primitive.h
     include/Material.h)
 
 set(CUDA_SOURCES
-    src/pathTracingKernel.cu)
+    src/pathTracingKernel.cu
+    src/mixKernel.cu)
 
 # ========== 添加可执行目标 ==========
 add_executable(PathTracing ${HEADERS})
@@ -63,4 +64,13 @@ target_link_libraries(PathTracing PRIVATE
 add_custom_command(TARGET PathTracing POST_BUILD
     COMMAND "${QT_DIR}/bin/windeployqt6.exe" "$<TARGET_FILE:PathTracing>"
     COMMENT "Running windeployqt6 to deploy Qt libraries..."
+)
+
+# ========== 修改compile_commands.json ==========
+add_custom_target(transform_commands ALL
+    COMMAND ${CMAKE_COMMAND} -E echo "transforming compile_commands.json ..."
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/utils/fix_clangd.py
+    DEPENDS ${CMAKE_BINARY_DIR}/compile_commands.json
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    COMMENT "transforming compile_commands.json"
 )

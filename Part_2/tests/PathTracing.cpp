@@ -1,4 +1,4 @@
-#include <ptScene.h>
+#include <Scene.h>
 #include <QApplication>
 #include <QSurfaceFormat>
 
@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
     format.setProfile(QSurfaceFormat::CoreProfile);
     QSurfaceFormat::setDefaultFormat(format);
 
-    ptScene pt;
+    pt::Scene pt;
     pt.resize(800, 800);
 
     pt.show();

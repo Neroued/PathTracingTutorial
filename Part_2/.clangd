@@ -10,6 +10,18 @@ CompileFlags:
     - '--options-file'
     - '-Xcompiler=-fPIC'
     - '--generate-code=arch=compute_89,code=[compute_89,sm_89]'
+    - '-Xcompiler= /GR /EHsc'
+    - '-Xcompiler=-O2 -Ob2'
+    - '-Xcompiler=-MD'
+    - '-Xcompiler=/Zc:__cplusplus'
+    - '-Xcompiler=-FdCMakeFiles\PathTracing.dir\,-FS'
   Add:
-    - '-std=c++20'
-    - '--cuda-gpu-arch=sm_89'
+    - '-std=c++17'
+    - '--cuda-path=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8'
+    - -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.8\\include"
+    - -Iinclude
+    - -IE:\code\c++\PathTracingTutorial\Part_2\include
+    - -D__CLANGD__
+    - -Wno-ignored-attributes
+    
+    
