@@ -1,5 +1,6 @@
+﻿#pragma once
 #ifdef __CLANGD__
-#    pragma once
+#    include <__clang_cuda_builtin_vars.h>
 
 // fake 声明 CUDA 的 surface 类型
 template <typename T, int dim = 2>

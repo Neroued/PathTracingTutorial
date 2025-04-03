@@ -23,5 +23,7 @@ CompileFlags:
     - -IE:\code\c++\PathTracingTutorial\Part_2\include
     - -D__CLANGD__
     - -Wno-ignored-attributes
+    - -Iinclude
+    - -IE:\code\c++\PathTracingTutorial\Part_2\extern
     
     

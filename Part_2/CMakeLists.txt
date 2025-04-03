@@ -6,6 +6,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_ARCHITECTURES 89) # RTX 4060
 set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_SEPARABLE_COMPILATION ON) # 允许跨文件调用 __device__ 函数或 __constant__ 数据
+
+# 启用 cuda 调试信息
+# set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G -g -lineinfo -Xptxas=\"-v\"")
+
+# 启用 cuda 优化
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
 
 # ========== MSVC 与 Qt 配合需要设置 ==========
 add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/Zc:__cplusplus>)
@@ -27,6 +34,7 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets OpenGL OpenGLWidgets)
 # ========== 添加include路径 ==========
 include_directories(include/)
 include_directories($ENV{CUDA_PATH}/include)
+include_directories(extern/)
 
 # ========== Qt初始化 ==========
 qt_standard_project_setup()
@@ -34,21 +42,31 @@ qt_standard_project_setup()
 # ========== 源文件与头文件 ==========
 set(CPP_SOURCES
     src/Scene.cpp
+    src/BVH.cpp
     tests/PathTracing.cpp)
 
 set(HEADERS
     include/Scene.h
-    include/Primitive.h
     include/Material.h)
 
 set(CUDA_SOURCES
     src/pathTracingKernel.cu
-    src/mixKernel.cu)
+    src/mixKernel.cu
+    src/SceneConstants.cu)
+
+set(CUDA_HEADERS
+    include/random_pcg.cuh
+    include/SceneConstants.cuh)
+
+set(EXTERN_SOURCES
+    extern/tinyObjLoader.cpp)
 
 # ========== 添加可执行目标 ==========
-add_executable(PathTracing ${HEADERS})
-target_sources(PathTracing PRIVATE ${CPP_SOURCES})
+add_executable(PathTracing ${HEADERS} ${CUDA_HEADERS})
+target_sources(PathTracing PRIVATE ${CPP_SOURCES} ${EXTERN_SOURCES})
 target_sources(PathTracing PRIVATE ${CUDA_SOURCES})
+
+add_executable(testBVH tests/testBVH.cpp src/BVH.cpp)
 
 # ========== 链接库 ==========
 target_link_libraries(PathTracing PRIVATE

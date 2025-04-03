@@ -1,15 +1,33 @@
 #include <Scene.h>
+#include <chrono>
+#include <cstddef>
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 #include <QDebug>
 #include <cudaKernelFunctions.h>
+#include <iostream>
+#include <iomanip>
+#include <qlogging.h>
+#include <qstringtokenizer.h>
+#include "BVH.h"
+#include "Material.h"
+#include "SceneConstants.cuh"
+#include "Triangle.h"
+#include "config.h"
+#include "cuda_runtime_api.h"
+#include "driver_types.h"
+#include "SceneConfig.h"
+
+#include "tiny_obj_loader.h"
 
 BEGIN_NAMESPACE_PT
 
 Scene::Scene(QWidget* parent)
     : QOpenGLWidget(parent), m_renderProgram(nullptr), m_computeTexture(0), m_imageTexture(0), m_computeResource(nullptr), m_imageResource(nullptr),
-      m_screenVBO(QOpenGLBuffer::VertexBuffer), m_width(800), m_height(800) {
-    resize(m_width, m_height);
+      m_screenVBO(QOpenGLBuffer::VertexBuffer) {
+    m_sceneData.width  = WIDTH;
+    m_sceneData.height = HEIGHT;
+    resize(m_sceneData.width, m_sceneData.height);
 }
 
 Scene::~Scene() {
@@ -39,6 +57,8 @@ Scene::~Scene() {
     }
 
     doneCurrent();
+
+    cleanup();
 }
 
 void Scene::initializeGL() {
@@ -55,8 +75,8 @@ void Scene::initializeGL() {
     // ------------------------
     // 创建用于存储计算结果的纹理
     // ------------------------
-    createTexture(&m_computeTexture, m_width, m_height, 0); // binding = 0
-    createTexture(&m_imageTexture, m_width, m_height, 1);   // binding = 1
+    createTexture(&m_computeTexture, m_sceneData.width, m_sceneData.height, 0); // binding = 0
+    createTexture(&m_imageTexture, m_sceneData.width, m_sceneData.height, 1);   // binding = 1
 
     // 将纹理注册到 cuda
     checkCudaErrors(cudaGraphicsGLRegisterImage(&m_computeResource, m_computeTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore),
@@ -69,11 +89,21 @@ void Scene::initializeGL() {
     // 构建全屏四边形（屏幕四边形）的 VAO/VBO
     // -------------------------------
     initializeQuad();
+
+    // -----------
+    // 记录开始时间
+    // -----------
+    m_lastStart = m_start = std::chrono::high_resolution_clock::now();
+
+    // --------------------
+    // 初始化 SceneConstants
+    // --------------------
+    initSceneConstants();
 }
 
 void Scene::resizeGL(int w, int h) {
-    m_width  = w;
-    m_height = h;
+    m_sceneData.width  = w;
+    m_sceneData.height = h;
 
     if (m_computeTexture) {
         glDeleteTextures(1, &m_computeTexture);
@@ -85,8 +115,8 @@ void Scene::resizeGL(int w, int h) {
     }
 
     // 生成新的纹理
-    createTexture(&m_computeTexture, m_width, m_height, 0);
-    createTexture(&m_imageTexture, m_width, m_height, 1);
+    createTexture(&m_computeTexture, m_sceneData.width, m_sceneData.height, 0);
+    createTexture(&m_imageTexture, m_sceneData.width, m_sceneData.height, 1);
 
     if (m_computeResource) {
         checkCudaErrors(cudaGraphicsUnregisterResource(m_computeResource), "cudaGraphicsUnregisterResource");
@@ -104,21 +134,27 @@ void Scene::resizeGL(int w, int h) {
     checkCudaErrors(cudaGraphicsGLRegisterImage(&m_imageResource, m_imageTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore),
                     "cudaGraphicsGLRegisterImage");
     // 重置帧计数
-    m_frameCount = 0;
+    m_sceneData.frameCount = 0;
 
     glViewport(0, 0, w, h);
 }
 
 void Scene::paintGL() {
-    // -------------------------------
-    // 1. 调度计算核心更新纹理
-    // -------------------------------
-    computePass();
+    if (m_sceneData.frameCount * SAMPLE_PER_FRAME < TARGET_SAMPLES) {
+        // -------------------------------
+        // 1. 调度计算核心更新纹理
+        // -------------------------------
+        computePass();
 
-    // -------------------------
-    // 2. 将新计算结果与之前的混合
-    // -------------------------
-    mixPass();
+        // -------------------------
+        // 2. 将新计算结果与之前的混合
+        // -------------------------
+        mixPass();
+    }
+
+    if (m_sceneData.frameCount * SAMPLE_PER_FRAME >= TARGET_SAMPLES && (m_sceneData.frameCount - 1) * SAMPLE_PER_FRAME < TARGET_SAMPLES) {
+        std::cout << std::endl;
+    }
 
     // -------------------------------
     // 3. 渲染全屏四边形，显示计算结果纹理
@@ -126,9 +162,15 @@ void Scene::paintGL() {
     renderShaderPass();
 
     // -----------------------
-    // 4. 调用 update() 触发重绘
+    // 4. 显示fps
     // -----------------------
-    m_frameCount++;
+    m_sceneData.frameCount++;
+    m_elapsedFrameCount++;
+    showFPS();
+
+    // -----------------------
+    // 5. 调用 update() 触发重绘
+    // -----------------------
     update();
 }
 
@@ -204,7 +246,7 @@ void Scene::computePass() {
     checkCudaErrors(cudaCreateSurfaceObject(&surfaceObj, &resDesc), "cudaCreateSurfaceObject");
 
     // 启动 CUDA kernel
-    launchKernel(surfaceObj, m_width, m_height);
+    launchKernel(surfaceObj, m_sceneData);
 
     // 销毁 surface 对象
     checkCudaErrors(cudaDestroySurfaceObject(surfaceObj), "cudaDestroySurfaceObject");
@@ -238,7 +280,7 @@ void Scene::mixPass() {
     checkCudaErrors(cudaCreateSurfaceObject(&imageSurfaceObj, &imageResDesc), "cudaCreateSurfaceObject");
 
     // 启动 CUDA kernel
-    launchMixKernel(computeSurfaceObj, imageSurfaceObj, m_width, m_height, m_frameCount + 1);
+    launchMixKernel(computeSurfaceObj, imageSurfaceObj, m_sceneData);
 
     // 销毁 surface 对象
     checkCudaErrors(cudaDestroySurfaceObject(computeSurfaceObj), "cudaDestroySurfaceObject");
@@ -307,8 +349,313 @@ void Scene::checkCudaErrors(cudaError_t err, const char* msg) {
     }
 }
 
-void Scene::initCudaConstants() {
+void Scene::showFPS() {
+    using namespace std::chrono;
+    auto elapsed     = high_resolution_clock::now() - m_lastStart;
+    auto duration_ms = duration_cast<milliseconds>(elapsed);
+    if (m_elapsedFrameCount == 10 || duration_ms.count() >= 100) {
+        float fps              = m_elapsedFrameCount * 1000.0f / static_cast<float>(duration_ms.count());
+        auto total_duration_ms = duration_cast<milliseconds>(high_resolution_clock::now() - m_start);
+        std::cout << std::fixed << std::setprecision(2) << "\rFPS: " << fps << " Elapsed time: " << static_cast<float>(duration_ms.count()) / 1000.0f
+                  << "s" << " Total frames: " << m_sceneData.frameCount << " Total time: " << static_cast<float>(total_duration_ms.count()) / 1000.0f
+                  << "s     " << std::flush;
+        m_elapsedFrameCount = 0;
+        m_lastStart         = high_resolution_clock::now();
+    }
+}
 
+void Scene::initSceneConstants() {
+    SceneConstants host;
+    host.width          = m_sceneData.width;
+    host.height         = m_sceneData.height;
+    host.cameraPos      = CAMERA_POS;
+    host.screenZ        = SCREEN_Z;
+    host.samplePerFrame = SAMPLE_PER_FRAME;
+    host.targetSamples  = TARGET_SAMPLES;
+    host.depth          = DEPTH;
+    uploadSceneConstant(host);
+}
+
+void Scene::uploadScene() {
+    cudaMalloc(&m_sceneData.triangles, m_triangles.size() * sizeof(Triangle));
+    cudaMemcpy(m_sceneData.triangles, m_triangles.data(), m_triangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice);
+    m_sceneData.numTriangles = m_triangles.size();
+
+    cudaMalloc(&m_sceneData.materials, m_materials.size() * sizeof(Material));
+    cudaMemcpy(m_sceneData.materials, m_materials.data(), m_materials.size() * sizeof(Material), cudaMemcpyHostToDevice);
+    m_sceneData.numMaterials = m_materials.size();
+
+    cudaMalloc(&m_sceneData.bvhNodes, m_bvh.nodes.size() * sizeof(BVHNode));
+    cudaMemcpy(m_sceneData.bvhNodes, m_bvh.nodes.data(), m_bvh.nodes.size() * sizeof(BVHNode), cudaMemcpyHostToDevice);
+    m_sceneData.numBvhNodes = m_bvh.nodes.size();
+}
+
+void Scene::cleanup() {
+    if (m_sceneData.triangles) cudaFree(m_sceneData.triangles);
+    if (m_sceneData.materials) cudaFree(m_sceneData.materials);
+    if (m_sceneData.bvhNodes) cudaFree(m_sceneData.bvhNodes);
+    m_sceneData.triangles = nullptr;
+    m_sceneData.materials = nullptr;
+    m_sceneData.bvhNodes  = nullptr;
+}
+
+void Scene::loadScene() {
+    cleanup();
+    m_triangles.clear();
+    m_materials.clear();
+
+    const vec3 RED(1, 0.5, 0.5);
+    const vec3 GREEN(0.5, 1, 0.5);
+    const vec3 BLUE(0.5, 0.5, 1);
+    const vec3 YELLOW(1.0, 1.0, 0.1);
+    const vec3 CYAN(0.1, 1.0, 1.0);
+    const vec3 MAGENTA(1.0, 0.1, 1.0);
+    const vec3 GRAY(0.5, 0.5, 0.5);
+    const vec3 WHITE(1, 1, 1);
+    const vec3 BLACK(0.0, 0.0, 0.0);
+
+    // 光源
+    Triangle l1   = Triangle(vec3(0.4, 0.99, 0.4), vec3(-0.4, 0.99, -0.4), vec3(-0.4, 0.99, 0.4));
+    Triangle l2   = Triangle(vec3(0.4, 0.99, 0.4), vec3(0.4, 0.99, -0.4), vec3(-0.4, 0.99, -0.4));
+    l1.materialID = 0;
+    l2.materialID = 0;
+    Material light;
+    light.emissive  = 1.0f;
+    light.baseColor = WHITE;
+    m_triangles.push_back(l1);
+    m_triangles.push_back(l2);
+    m_materials.push_back(light);
+
+    // 背景盒子
+    // bottom
+    Triangle bottom1   = Triangle(vec3(1, -1, 1), vec3(-1, -1, -1), vec3(-1, -1, 1));
+    Triangle bottom2   = Triangle(vec3(1, -1, 1), vec3(1, -1, -1), vec3(-1, -1, -1));
+    bottom1.materialID = 1;
+    bottom2.materialID = 1;
+    Material bottom;
+    bottom.baseColor = WHITE;
+    m_triangles.push_back(bottom1);
+    m_triangles.push_back(bottom2);
+    m_materials.push_back(bottom);
+
+    // top
+    Triangle top1   = Triangle(vec3(1, 1, 1), vec3(-1, 1, 1), vec3(-1, 1, -1));
+    Triangle top2   = Triangle(vec3(1, 1, 1), vec3(-1, 1, -1), vec3(1, 1, -1));
+    top1.materialID = 2;
+    top2.materialID = 2;
+    Material top;
+    top.baseColor = WHITE;
+    m_triangles.push_back(top1);
+    m_triangles.push_back(top2);
+    m_materials.push_back(top);
+
+    // back
+    Triangle back1   = Triangle(vec3(1, -1, -1), vec3(-1, 1, -1), vec3(-1, -1, -1));
+    Triangle back2   = Triangle(vec3(1, -1, -1), vec3(1, 1, -1), vec3(-1, 1, -1));
+    back1.materialID = 3;
+    back2.materialID = 3;
+    Material back;
+    back.baseColor = CYAN;
+    m_triangles.push_back(back1);
+    m_triangles.push_back(back2);
+    m_materials.push_back(back);
+
+    // left
+    Triangle left1   = Triangle(vec3(-1, -1, -1), vec3(-1, 1, 1), vec3(-1, -1, 1));
+    Triangle left2   = Triangle(vec3(-1, -1, -1), vec3(-1, 1, -1), vec3(-1, 1, 1));
+    left1.materialID = 4;
+    left2.materialID = 4;
+    Material left;
+    left.baseColor = BLUE;
+    m_triangles.push_back(left1);
+    m_triangles.push_back(left2);
+    m_materials.push_back(left);
+
+    // right
+    Triangle right1   = Triangle(vec3(1, 1, 1), vec3(1, -1, -1), vec3(1, -1, 1));
+    Triangle right2   = Triangle(vec3(1, -1, -1), vec3(1, 1, 1), vec3(1, 1, -1));
+    right1.materialID = 5;
+    right2.materialID = 5;
+    Material right;
+    right.baseColor = RED;
+    m_triangles.push_back(right1);
+    m_triangles.push_back(right2);
+    m_materials.push_back(right);
+
+    // 添加立方体1（较大）
+    Material cube1Mat;
+    cube1Mat.baseColor = GREEN; // 使用预定义的绿色
+    m_materials.push_back(cube1Mat);
+    int cube1MaterialID = m_materials.size() - 1;
+    vec3 cube1Min(-0.7, -1, -0.6);
+    vec3 cube1Max(-0.1, 0.2, 0.0);
+    // 示例：对“较大立方体”绕 Y 轴旋转
+    mat4 transform1;
+    vec3 cube1Center = 0.5f * (cube1Min + cube1Max);
+    // 第1步: 将立方体中心移到原点
+    transform1.translate(cube1Center);
+    // 第2步: 旋转
+    float angle1 = 30.0f; // 例如旋转 30°
+    transform1.rotate(angle1, {0.0f, 1.0f, 0.0f});
+    // 第3步: 平移回去
+    transform1.translate(-cube1Center);
+    // 最后调用 addCube() 时，把该 transform 传进去
+    // addCube(cube1Min, cube1Max, cube1MaterialID, transform1);
+
+    // 添加立方体2（较小）
+    Material cube2Mat;
+    cube2Mat.baseColor = YELLOW; // 使用预定义的黄色
+    m_materials.push_back(cube2Mat);
+    int cube2MaterialID = m_materials.size() - 1;
+    vec3 cube2Min(0.2, -1, -0.2);
+    vec3 cube2Max(0.8, -0.4, 0.5);
+    // addCube(cube2Min, cube2Max, cube2MaterialID);
+
+    // 镜面反射材质
+    Material mirrorMat;
+    mirrorMat.baseColor    = WHITE;
+    mirrorMat.specularRate = 1.0f;
+    mirrorMat.roughness    = 0.1f;
+    m_materials.push_back(mirrorMat);
+    int mirrorMaterialID = m_materials.size() - 1;
+
+    // 在右边添加一个平片镜子
+    Triangle mirror1   = Triangle(vec3(1, -1, -0.7), vec3(1, 1, -0.7), vec3(0.5, 1, -1));  // 右下， 右上， 左上
+    Triangle mirror2   = Triangle(vec3(1, -1, -0.7), vec3(0.5, 1, -1), vec3(0.5, -1, -1)); // 右下， 左上， 左下
+    mirror1.materialID = mirrorMaterialID;
+    mirror2.materialID = mirrorMaterialID;
+    m_triangles.push_back(mirror1);
+    m_triangles.push_back(mirror2);
+
+    // 加载一个茶杯
+    mat4 tranform1 = mat4::translation(0.0f, -1.0f, 0.0f) * mat4::scaling(0.01f, 0.01f, 0.01f);
+    addObj("E:\\code\\c++\\PathTracingTutorial\\Part_2\\models\\teapot.obj", 6, tranform1);
+
+    // 加载 bunny
+    // mat4 tranform2 = mat4::translation(0.5f, -0.48f, 0.15f) * mat4::scaling(2.5f, 2.5f, 2.5f);
+    // addObj("E:\\code\\c++\\PathTracingTutorial\\Part_2\\models\\Stanford Bunny.obj", 1, tranform2);
+
+    // 构建 BVH
+    m_bvh.build(m_triangles, 0, m_triangles.size());
+
+    std::cout << "Triangles: " << m_triangles.size();
+    std::cout << " BVH nodes: " << m_bvh.nodes.size() << std::endl;
+
+    uploadScene();
+}
+
+
+
+void Scene::addCube(const vec3& minCorner, const vec3& maxCorner, int materialID, const mat4& transform) {
+    // 构造立方体八个角点
+    vec3 v000(minCorner.x, minCorner.y, minCorner.z);
+    vec3 v001(minCorner.x, minCorner.y, maxCorner.z);
+    vec3 v010(minCorner.x, maxCorner.y, minCorner.z);
+    vec3 v011(minCorner.x, maxCorner.y, maxCorner.z);
+    vec3 v100(maxCorner.x, minCorner.y, minCorner.z);
+    vec3 v101(maxCorner.x, minCorner.y, maxCorner.z);
+    vec3 v110(maxCorner.x, maxCorner.y, minCorner.z);
+    vec3 v111(maxCorner.x, maxCorner.y, maxCorner.z);
+
+    // 应用变换（内部调用 operator*(vec3) 实现点变换，w默认为1）
+    v000 = transform * v000;
+    v001 = transform * v001;
+    v010 = transform * v010;
+    v011 = transform * v011;
+    v100 = transform * v100;
+    v101 = transform * v101;
+    v110 = transform * v110;
+    v111 = transform * v111;
+
+    // 底面 (y = minCorner.y)
+    Triangle tri1(v000, v100, v101);
+    Triangle tri2(v000, v101, v001);
+    tri1.materialID = materialID;
+    tri2.materialID = materialID;
+    m_triangles.push_back(tri1);
+    m_triangles.push_back(tri2);
+
+    // 顶面 (y = maxCorner.y)
+    Triangle tri3(v010, v011, v111);
+    Triangle tri4(v010, v111, v110);
+    tri3.materialID = materialID;
+    tri4.materialID = materialID;
+    m_triangles.push_back(tri3);
+    m_triangles.push_back(tri4);
+
+    // 前面 (z = maxCorner.z)
+    Triangle tri5(v001, v101, v111);
+    Triangle tri6(v001, v111, v011);
+    tri5.materialID = materialID;
+    tri6.materialID = materialID;
+    m_triangles.push_back(tri5);
+    m_triangles.push_back(tri6);
+
+    // 后面 (z = minCorner.z)
+    Triangle tri7(v000, v010, v110);
+    Triangle tri8(v000, v110, v100);
+    tri7.materialID = materialID;
+    tri8.materialID = materialID;
+    m_triangles.push_back(tri7);
+    m_triangles.push_back(tri8);
+
+    // 左面 (x = minCorner.x)
+    Triangle tri9(v000, v001, v011);
+    Triangle tri10(v000, v011, v010);
+    tri9.materialID  = materialID;
+    tri10.materialID = materialID;
+    m_triangles.push_back(tri9);
+    m_triangles.push_back(tri10);
+
+    // 右面 (x = maxCorner.x)
+    Triangle tri11(v100, v110, v111);
+    Triangle tri12(v100, v111, v101);
+    tri11.materialID = materialID;
+    tri12.materialID = materialID;
+    m_triangles.push_back(tri11);
+    m_triangles.push_back(tri12);
+}
+
+void Scene::addObj(const std::string& filename, int materialID, const mat4& transform) {
+    tinyobj::ObjReaderConfig readerConfig;
+    readerConfig.mtl_search_path = "./";
+
+    tinyobj::ObjReader reader;
+
+    if (!reader.ParseFromFile(filename, readerConfig)) {
+        if (!reader.Error().empty()) { qWarning() << "TinyObjReader: " << reader.Error(); }
+        return;
+    }
+
+    if (!reader.Warning().empty()) { qWarning() << "TinyObjReader: " << reader.Warning(); }
+
+    auto& attrib    = reader.GetAttrib();
+    auto& shapes    = reader.GetShapes();
+    auto& materials = reader.GetMaterials();
+
+    for (size_t s = 0; s < shapes.size(); ++s) {
+        size_t indexOffset = 0;
+        m_triangles.reserve(m_triangles.size() + shapes[s].mesh.num_face_vertices.size());
+        for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); ++f) {
+            size_t fv = shapes[s].mesh.num_face_vertices[f]; // 面的顶点数量，应当为 3
+            if (fv == 3) {                                   // 读取三个顶点，存放到三个 vec3 中
+                vec3 p[3];
+                for (size_t v = 0; v < fv; ++v) {
+                    tinyobj::index_t idx = shapes[s].mesh.indices[indexOffset + v];
+
+                    tinyobj::real_t vx = attrib.vertices[3 * size_t(idx.vertex_index) + 0];
+                    tinyobj::real_t vy = attrib.vertices[3 * size_t(idx.vertex_index) + 1];
+                    tinyobj::real_t vz = attrib.vertices[3 * size_t(idx.vertex_index) + 2];
+                    p[v]               = transform.transformPoint(vec3(vx, vy, vz));
+                }
+
+                Triangle& tri  = m_triangles.emplace_back(p[0], p[1], p[2]);
+                tri.materialID = materialID;
+            }
+
+            indexOffset += fv;
+        }
+    }
 }
 
 END_NAMESPACE_PT
