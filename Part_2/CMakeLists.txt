@@ -39,6 +39,7 @@ set(CPP_SOURCES
     src/Scene.cpp
     src/BVH.cpp
     src/ImageLoader.cpp
+    src/Texture.cpp
     tests/PathTracing.cpp)
 
 set(HEADERS

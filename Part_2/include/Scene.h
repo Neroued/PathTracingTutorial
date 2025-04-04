@@ -6,6 +6,7 @@
 #include "vec3.h"
 #include "mat4.h"
 #include "BVH.h"
+#include "Texture.h"
 
 #include <Material.h>
 #include <QOpenGLBuffer>
@@ -67,6 +68,7 @@ private:
     cudaGraphicsResource* m_imageResource;   // 对应历史结果的资源
 
     SceneData m_sceneData;
+    Texture m_hdrTex;
 
     // 用于显示fps
     std::chrono::steady_clock::time_point m_start;     // 程序累计运行时间

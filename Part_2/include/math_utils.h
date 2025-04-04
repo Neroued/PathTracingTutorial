@@ -75,7 +75,7 @@ PT_CPU_GPU inline float pow(float base, float exp) {
 #endif
 }
 
-// sin, cos
+// sin, cos, tan
 PT_CPU_GPU inline float sin(float x) {
 #ifdef __CUDA_ARCH__
     return sinf(x);
@@ -89,6 +89,47 @@ PT_CPU_GPU inline float cos(float x) {
     return cosf(x);
 #else
     return std::cos(x);
+#endif
+}
+
+PT_CPU_GPU inline float tan(float x) {
+#ifdef __CUDA_ARCH__
+    return tanf(x);
+#else
+    return std::tan(x);
+#endif
+}
+
+// asin, acos, atan, atan2
+PT_CPU_GPU inline float asin(float x) {
+#ifdef __CUDA_ARCH__
+    return asinf(x);
+#else
+    return std::asin(x);
+#endif
+}
+
+PT_CPU_GPU inline float acos(float x) {
+#ifdef __CUDA_ARCH__
+    return acosf(x);
+#else
+    return std::acos(x);
+#endif
+}
+
+PT_CPU_GPU inline float atan(float x) {
+#ifdef __CUDA_ARCH__
+    return atanf(x);
+#else
+    return std::atan(x);
+#endif
+}
+
+PT_CPU_GPU inline float atan2(float y, float x) {
+#ifdef __CUDA_ARCH__
+    return atan2f(y, x);
+#else
+    return std::atan2(y, x);
 #endif
 }
 
@@ -134,17 +175,10 @@ PT_CPU_GPU inline float round(float x) {
 #endif
 }
 
-PT_CPU_GPU inline constexpr float float_max() {
-    return FLT_MAX;
-}
+PT_CPU_GPU inline constexpr float float_max() { return FLT_MAX; }
 
-PT_CPU_GPU inline constexpr float float_min() {
-    return -FLT_MAX;
-}
+PT_CPU_GPU inline constexpr float float_min() { return -FLT_MAX; }
 
-PT_CPU_GPU inline constexpr float float_epsilon() {
-    return FLT_EPSILON;
-}
+PT_CPU_GPU inline constexpr float float_epsilon() { return FLT_EPSILON; }
 
 END_NAMESPACE_PT
-

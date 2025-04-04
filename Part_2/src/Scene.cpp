@@ -17,7 +17,10 @@
 #include "cuda_runtime_api.h"
 #include "driver_types.h"
 #include "SceneConfig.h"
+#include "Texture.h"
+#include "ImageLoader.h"
 
+#include "mat4.h"
 #include "tiny_obj_loader.h"
 
 BEGIN_NAMESPACE_PT
@@ -242,7 +245,7 @@ void Scene::computePass() {
     CUDA_SAFE_CALL(cudaCreateSurfaceObject(&surfaceObj, &resDesc));
 
     // 启动 CUDA kernel
-    launchKernel(surfaceObj, m_sceneData);
+    launchKernel(surfaceObj, std::move(m_sceneData));
 
     // 销毁 surface 对象
     CUDA_SAFE_CALL(cudaDestroySurfaceObject(surfaceObj));
@@ -377,6 +380,8 @@ void Scene::uploadScene() {
     CUDA_SAFE_CALL(cudaMalloc(&m_sceneData.bvhNodes, m_bvh.nodes.size() * sizeof(BVHNode)));
     CUDA_SAFE_CALL(cudaMemcpy(m_sceneData.bvhNodes, m_bvh.nodes.data(), m_bvh.nodes.size() * sizeof(BVHNode), cudaMemcpyHostToDevice));
     m_sceneData.numBvhNodes = m_bvh.nodes.size();
+
+    m_sceneData.hdrTex = m_hdrTex.cuTexture;
 }
 
 void Scene::cleanup() {
@@ -411,8 +416,8 @@ void Scene::loadScene() {
     Material light;
     light.emissive  = 1.0f;
     light.baseColor = WHITE;
-    m_triangles.push_back(l1);
-    m_triangles.push_back(l2);
+    // m_triangles.push_back(l1);
+    // m_triangles.push_back(l2);
     m_materials.push_back(light);
 
     // 背景盒子
@@ -423,8 +428,8 @@ void Scene::loadScene() {
     bottom2.materialID = 1;
     Material bottom;
     bottom.baseColor = WHITE;
-    m_triangles.push_back(bottom1);
-    m_triangles.push_back(bottom2);
+    // m_triangles.push_back(bottom1);
+    // m_triangles.push_back(bottom2);
     m_materials.push_back(bottom);
 
     // top
@@ -434,8 +439,8 @@ void Scene::loadScene() {
     top2.materialID = 2;
     Material top;
     top.baseColor = WHITE;
-    m_triangles.push_back(top1);
-    m_triangles.push_back(top2);
+    // m_triangles.push_back(top1);
+    // m_triangles.push_back(top2);
     m_materials.push_back(top);
 
     // back
@@ -445,8 +450,8 @@ void Scene::loadScene() {
     back2.materialID = 3;
     Material back;
     back.baseColor = CYAN;
-    m_triangles.push_back(back1);
-    m_triangles.push_back(back2);
+    // m_triangles.push_back(back1);
+    // m_triangles.push_back(back2);
     m_materials.push_back(back);
 
     // left
@@ -456,8 +461,8 @@ void Scene::loadScene() {
     left2.materialID = 4;
     Material left;
     left.baseColor = BLUE;
-    m_triangles.push_back(left1);
-    m_triangles.push_back(left2);
+    // m_triangles.push_back(left1);
+    // m_triangles.push_back(left2);
     m_materials.push_back(left);
 
     // right
@@ -467,8 +472,8 @@ void Scene::loadScene() {
     right2.materialID = 5;
     Material right;
     right.baseColor = RED;
-    m_triangles.push_back(right1);
-    m_triangles.push_back(right2);
+    // m_triangles.push_back(right1);
+    // m_triangles.push_back(right2);
     m_materials.push_back(right);
 
     // 添加立方体1（较大）
@@ -502,9 +507,9 @@ void Scene::loadScene() {
 
     // 镜面反射材质
     Material mirrorMat;
-    mirrorMat.baseColor    = WHITE;
-    mirrorMat.specularRate = 1.0f;
-    mirrorMat.roughness    = 0.1f;
+    mirrorMat.baseColor    = YELLOW;
+    mirrorMat.specularRate = 0.9f;
+    mirrorMat.roughness    = 0.3f;
     m_materials.push_back(mirrorMat);
     int mirrorMaterialID = m_materials.size() - 1;
 
@@ -513,22 +518,34 @@ void Scene::loadScene() {
     Triangle mirror2   = Triangle(vec3(1, -1, -0.7), vec3(0.5, 1, -1), vec3(0.5, -1, -1)); // 右下， 左上， 左下
     mirror1.materialID = mirrorMaterialID;
     mirror2.materialID = mirrorMaterialID;
-    m_triangles.push_back(mirror1);
-    m_triangles.push_back(mirror2);
+    // m_triangles.push_back(mirror1);
+    // m_triangles.push_back(mirror2);
 
     // 加载一个茶杯
     mat4 tranform1 = mat4::translation(0.0f, -1.0f, 0.0f) * mat4::scaling(0.01f, 0.01f, 0.01f);
-    addObj("E:\\code\\c++\\PathTracingTutorial\\Part_2\\models\\teapot.obj", 6, tranform1);
+    // addObj("E:\\code\\c++\\PathTracingTutorial\\Part_2\\models\\teapot.obj", mirrorMaterialID, tranform1);
 
     // 加载 bunny
-    // mat4 tranform2 = mat4::translation(0.5f, -0.48f, 0.15f) * mat4::scaling(2.5f, 2.5f, 2.5f);
-    // addObj("E:\\code\\c++\\PathTracingTutorial\\Part_2\\models\\Stanford Bunny.obj", 1, tranform2);
+    mat4 tranform2 = mat4::translation(0.5f, -0.48f, 0.15f) * mat4::scaling(2.5f, 2.5f, 2.5f);
+    // addObj("E:\\code\\c++\\PathTracingTutorial\\Part_2\\models\\Stanford Bunny.obj", 2, tranform2);
+
+    // 加载 dragon
+    float angleRad  = PI / 2.0f;
+    float scale = 4.0f;
+    mat4 transform3 = mat4::translation(0.0f, -0.5f, 0.0f) * mat4::rotation(angleRad, vec3(0.0f, 1.0f, 0.0f)) * mat4::scaling(scale, scale, scale);
+    addObj("E:\\code\\c++\\PathTracingTutorial\\Part_2\\models\\dragon.obj", mirrorMaterialID, transform3);
 
     // 构建 BVH
     m_bvh.build(m_triangles, 0, m_triangles.size());
 
     std::cout << "Triangles: " << m_triangles.size();
     std::cout << " BVH nodes: " << m_bvh.nodes.size() << std::endl;
+
+    // 加载 hdr 贴图
+    Image img;
+    ImageLoader::load(img, "E:\\code\\c++\\PathTracingTutorial\\Part_2\\models\\brown_photostudio_02_4k.hdr");
+
+    m_hdrTex = Texture(img);
 
     uploadScene();
 }
@@ -616,9 +633,12 @@ void Scene::addObj(const std::string& filename, int materialID, const mat4& tran
 
     if (!reader.Warning().empty()) { std::cerr << "TinyObjReader: " << reader.Warning(); }
 
-    auto& attrib    = reader.GetAttrib();
-    auto& shapes    = reader.GetShapes();
-    auto& materials = reader.GetMaterials();
+    const auto& attrib    = reader.GetAttrib();
+    const auto& shapes    = reader.GetShapes();
+    const auto& materials = reader.GetMaterials();
+
+    // 计算 tranform 的逆转置用于变换法线
+    const mat4 transform_inv_T = transform.inverse().transposed();
 
     for (size_t s = 0; s < shapes.size(); ++s) {
         size_t indexOffset = 0;
@@ -626,7 +646,8 @@ void Scene::addObj(const std::string& filename, int materialID, const mat4& tran
         for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); ++f) {
             size_t fv = shapes[s].mesh.num_face_vertices[f]; // 面的顶点数量，应当为 3
             if (fv == 3) {                                   // 读取三个顶点，存放到三个 vec3 中
-                vec3 p[3];
+                vec3 p[3], n[3];
+                bool haveNormal = true;
                 for (size_t v = 0; v < fv; ++v) {
                     tinyobj::index_t idx = shapes[s].mesh.indices[indexOffset + v];
 
@@ -634,10 +655,24 @@ void Scene::addObj(const std::string& filename, int materialID, const mat4& tran
                     tinyobj::real_t vy = attrib.vertices[3 * size_t(idx.vertex_index) + 1];
                     tinyobj::real_t vz = attrib.vertices[3 * size_t(idx.vertex_index) + 2];
                     p[v]               = transform.transformPoint(vec3(vx, vy, vz));
+
+                    if (idx.normal_index >= 0 && haveNormal) {
+                        tinyobj::real_t nx = attrib.normals[3 * size_t(idx.normal_index) + 0];
+                        tinyobj::real_t ny = attrib.normals[3 * size_t(idx.normal_index) + 1];
+                        tinyobj::real_t nz = attrib.normals[3 * size_t(idx.normal_index) + 2];
+                        n[v]               = transform_inv_T.transformVector(vec3(nx, ny, nz));
+                    } else {
+                        haveNormal = false;
+                    }
                 }
 
-                Triangle& tri  = m_triangles.emplace_back(p[0], p[1], p[2]);
-                tri.materialID = materialID;
+                if (haveNormal) {
+                    Triangle& tri  = m_triangles.emplace_back(p[0], p[1], p[2], n[0], n[1], n[2]);
+                    tri.materialID = materialID;
+                } else {
+                    Triangle& tri  = m_triangles.emplace_back(p[0], p[1], p[2]);
+                    tri.materialID = materialID;
+                }
             }
 
             indexOffset += fv;

@@ -171,7 +171,7 @@ struct Ray {
         res.isHit      = true;
         res.distance   = t;
         res.hitPoint   = origin + t * direction;
-        res.normal     = triangle.normal;
+        res.normal     = normalize((1 - u - v) * triangle.n1 + u * triangle.n2 + v * triangle.n3);
         res.materialID = triangle.materialID;
 
         return res;

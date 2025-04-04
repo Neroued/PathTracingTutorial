@@ -2,18 +2,21 @@
 
 #include <cuda_runtime.h>
 #include <driver_types.h>
+#include <texture_indirect_functions.h>
+#include <texture_types.h>
+#include <vector_functions.h>
 #include "cuda_fake.h"
 
 #include "math_utils.h"
 #include "random_pcg.cuh"
 #include "vec3.h"
+#include "vec2.h"
 #include "Ray.h"
 #include "Material.h"
 #include "SceneData.h"
 #include "SceneConstants.cuh"
 
 BEGIN_NAMESPACE_PT
-
 
 // 半球均匀采样
 PT_GPU vec3 sampleHemisphere(unsigned int* state) {
@@ -60,18 +63,25 @@ PT_GPU Ray randomRay(const vec3& o, const vec3& N, unsigned int* state) {
     return Ray(o, d);
 }
 
-PT_GPU HitResult nearestHit(const Ray& ray, const SceneData& data) {
-    HitResult res;
-    HitResult r;
+// 环境贴图采样不考虑光线的出发点，只考虑光线的方向
+// 因为假设环境贴图距离观察物体无穷远，各个位置观察相同方向的背景是一致的
 
-    float nearest = float_max();
-    for (int i = 0; i < data.numTriangles; ++i) {
-        r = ray.intersectTriangle(data.triangles[i]);
-        if (r.isHit && r.distance < nearest) {
-            nearest = r.distance;
-            res     = r;
-        }
-    }
+// 将 vec3 方向转换为 vec2 uv 坐标
+PT_GPU vec2 sampleSphericalMap(const vec3& direction) {
+    vec2 uv = vec2(atan2(direction.z, direction.x), asin(direction.y));
+    uv.x /= TWO_PI;
+    uv.y *= INV_PI;
+    uv.x += 0.5f;
+    uv.y += 0.5f;
+    uv.y = 1.0f - uv.y; // 反转 y 轴
+    return uv;
+}
+
+// 从 HDR 环境贴图中采样
+PT_GPU vec3 sampleHDR(const cudaTextureObject_t& texObj, const vec3& direction) {
+    vec2 uv      = sampleSphericalMap(direction);
+    float4 color = tex2D<float4>(texObj, uv.x, uv.y);
+    vec3 res = vec3(color.x, color.y, color.z);
     return res;
 }
 
@@ -82,9 +92,14 @@ PT_GPU vec3 pathTracing(const SceneData& data, unsigned int* state) {
     Ray ray = emitRay(state);
 
     for (int d = 0; d < d_sceneConstants.depth; ++d) {
-        // HitResult hit = nearestHit(ray, data);
         HitResult hit = ray.intersectBVH(data.bvhNodes, data.triangles);
-        if (!hit.isHit) { break; }
+
+        // 若为命中物体，对背景贴图采样并退出
+        if (!hit.isHit) { 
+            vec3 env = sampleHDR(data.hdrTex, ray.direction);
+            Lo += throughput * env * TWO_PI;
+            break;
+        }
 
         Material& mat = data.materials[hit.materialID];
 
@@ -107,7 +122,7 @@ PT_GPU vec3 pathTracing(const SceneData& data, unsigned int* state) {
             brdfFactor = mat.baseColor / pdf;
         } else {
             // 漫反射
-            wi             = toNormalHemisphere(sampleHemisphere(state), hit.normal);
+            wi = toNormalHemisphere(sampleHemisphere(state), hit.normal);
             // float cosine_o = max(0.0f, dot(-ray.direction, hit.normal));
             float cosine_i = max(0.0f, dot(wi, hit.normal));
             vec3 f_r       = mat.baseColor / PI;
@@ -150,8 +165,8 @@ PT_KERNEL void kernelTest(cudaSurfaceObject_t surface, SceneData data) {
     vec3 acc = {0.0f, 0.0f, 0.0f};
     for (int i = 0; i < d_sceneConstants.samplePerFrame; ++i) { acc += pathTracing(data, &state); }
     acc /= d_sceneConstants.samplePerFrame;
-
     float4 value   = make_float4(acc, 1.0f);
+
     int byteOffset = x * sizeof(float4);
     surf2Dwrite(value, surface, byteOffset, y);
 }

@@ -4,6 +4,7 @@
 #include "Triangle.h"
 #include "Material.h"
 #include "BVH.h"
+#include "texture_types.h"
 #include <cstdint>
 
 BEGIN_NAMESPACE_PT
@@ -21,6 +22,8 @@ struct SceneData {
 
     BVHNode* bvhNodes = nullptr;
     uint32_t numBvhNodes; 
+
+    cudaTextureObject_t hdrTex;
 };
 
 END_NAMESPACE_PT

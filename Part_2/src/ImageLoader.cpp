@@ -52,6 +52,7 @@ bool ImageLoader::load(Image& image, const std::string& filename) {
         stbi_image_free(data);
         // 确保 alpha 通道数据为 1.0f
         for (size_t i = 0; i < static_cast<size_t>(width) * height; ++i) { image.data[i * 4 + 3] = 1.0f; }
+        std::cout << "ImageLoader: Load HDR image: " << filename << std::endl;
         return true;
     } else if (ext == ".jpg" || ext == ".jpeg" || ext == ".png") {
         // JPG 和 PNG 使用 stbi_load 加载 8 位数据
@@ -78,6 +79,7 @@ bool ImageLoader::load(Image& image, const std::string& filename) {
             image.data[i * 4 + 3] = 1.0f;
         }
         stbi_image_free(data);
+        std::cout << "ImageLoader: Load image: " << filename << std::endl;
         return true;
     } else {
         image.data.clear();
