@@ -46,7 +46,6 @@ private:
     void initializeQuad();                                                   // 初始化全屏四边形
     void createTexture(GLuint* texture, int width, int height, GLuint unit); // 创建材质
 
-    void checkCudaErrors(cudaError_t err, const char* msg);
     void initSceneConstants();
 
     void showFPS();

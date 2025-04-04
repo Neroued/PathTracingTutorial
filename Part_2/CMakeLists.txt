@@ -19,13 +19,8 @@ add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/Zc:__cplusplus>)
 add_compile_options($<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/Zc:__cplusplus>)
 
 # ========== 选择正确的Qt ==========
-if(MSVC)
-    message(STATUS "Using MSVC compiler")
-    set(QT_DIR $ENV{QT_MSVC})
-    set(CMAKE_PREFIX_PATH ${QT_DIR})
-else()
-    message(WARNING "Unknown compiler: please set CMAKE_PREFIX_PATH manually")
-endif()
+set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};$ENV{QT_MSVC}")
+
 
 # ========== 查找需要的库 ==========
 find_package(OpenGL REQUIRED)
@@ -43,6 +38,7 @@ qt_standard_project_setup()
 set(CPP_SOURCES
     src/Scene.cpp
     src/BVH.cpp
+    src/ImageLoader.cpp
     tests/PathTracing.cpp)
 
 set(HEADERS
@@ -68,6 +64,10 @@ target_sources(PathTracing PRIVATE ${CUDA_SOURCES})
 
 add_executable(testBVH tests/testBVH.cpp src/BVH.cpp)
 
+add_executable(testTinyObj tests/testTinyObj.cpp ${EXTERN_SOURCES})
+
+add_executable(testImage tests/testImage.cpp src/ImageLoader.cpp)
+
 # ========== 链接库 ==========
 target_link_libraries(PathTracing PRIVATE
     Qt6::Core
@@ -80,7 +80,7 @@ target_link_libraries(PathTracing PRIVATE
 
 # ========== 添加所需运行库 ==========
 add_custom_command(TARGET PathTracing POST_BUILD
-    COMMAND "${QT_DIR}/bin/windeployqt6.exe" "$<TARGET_FILE:PathTracing>"
+    COMMAND "$ENV{QT_MSVC}/bin/windeployqt6.exe" "$<TARGET_FILE:PathTracing>"
     COMMENT "Running windeployqt6 to deploy Qt libraries..."
 )
 

@@ -2,7 +2,6 @@
 
 #include <cuda_runtime.h>
 #include <driver_types.h>
-#include <iostream>
 #include "cuda_fake.h"
 
 #include "math_utils.h"
@@ -12,7 +11,6 @@
 #include "Material.h"
 #include "SceneData.h"
 #include "SceneConstants.cuh"
-#include <cuda_profiler_api.h>
 
 BEGIN_NAMESPACE_PT
 
@@ -163,10 +161,6 @@ END_NAMESPACE_PT
 extern "C" void launchKernel(cudaSurfaceObject_t surface, pt::SceneData data) {
     dim3 blockSize(BLOCK_SIZE_X, BLOCK_SIZE_Y);
     dim3 gridSize((data.width + blockSize.x - 1) / blockSize.x, (data.height + blockSize.y - 1) / blockSize.y);
-    cudaProfilerStart(); 
     pt::kernelTest<<<gridSize, blockSize>>>(surface, data);
-    cudaProfilerStop(); 
-
-    cudaError_t err = cudaDeviceSynchronize();
-    if (err != cudaSuccess) std::cerr << "CUDA Kernel failed: " << cudaGetErrorString(err) << std::endl;
+    CHECK_LAUNCH_ERROR();
 }

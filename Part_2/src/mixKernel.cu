@@ -1,7 +1,6 @@
 #include "config.h"
 
 #include <cuda_runtime.h>
-#include <iostream>
 #include "cuda_fake.h"
 #include "SceneData.h"
 
@@ -32,6 +31,5 @@ extern "C" void launchMixKernel(cudaSurfaceObject_t surfaceNew, cudaSurfaceObjec
     dim3 gridSize((data.width + blockSize.x - 1) / blockSize.x, (data.height + blockSize.y - 1) / blockSize.y);
     kernelMix<<<gridSize, blockSize>>>(surfaceNew, surfaceAcc, data);
 
-    cudaError_t err = cudaDeviceSynchronize();
-    if (err != cudaSuccess) std::cerr << "CUDA Kernel failed: " << cudaGetErrorString(err) << std::endl;
+    CHECK_LAUNCH_ERROR();
 }

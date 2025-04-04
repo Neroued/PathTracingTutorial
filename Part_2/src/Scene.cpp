@@ -47,12 +47,12 @@ Scene::~Scene() {
     delete m_renderProgram;
 
     if (m_computeResource) {
-        checkCudaErrors(cudaGraphicsUnregisterResource(m_computeResource), "cudaGraphicsUnregisterResource");
+        CUDA_SAFE_CALL(cudaGraphicsUnregisterResource(m_computeResource));
         m_computeResource = nullptr;
     }
 
     if (m_imageResource) {
-        checkCudaErrors(cudaGraphicsUnregisterResource(m_imageResource), "cudaGraphicsUnregisterResource");
+        CUDA_SAFE_CALL(cudaGraphicsUnregisterResource(m_imageResource));
         m_imageResource = nullptr;
     }
 
@@ -79,11 +79,9 @@ void Scene::initializeGL() {
     createTexture(&m_imageTexture, m_sceneData.width, m_sceneData.height, 1);   // binding = 1
 
     // 将纹理注册到 cuda
-    checkCudaErrors(cudaGraphicsGLRegisterImage(&m_computeResource, m_computeTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore),
-                    "cudaGraphicsGLRegisterImage");
+    CUDA_SAFE_CALL(cudaGraphicsGLRegisterImage(&m_computeResource, m_computeTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore));
 
-    checkCudaErrors(cudaGraphicsGLRegisterImage(&m_imageResource, m_imageTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore),
-                    "cudaGraphicsGLRegisterImage");
+    CUDA_SAFE_CALL(cudaGraphicsGLRegisterImage(&m_imageResource, m_imageTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore));
 
     // -------------------------------
     // 构建全屏四边形（屏幕四边形）的 VAO/VBO
@@ -119,20 +117,18 @@ void Scene::resizeGL(int w, int h) {
     createTexture(&m_imageTexture, m_sceneData.width, m_sceneData.height, 1);
 
     if (m_computeResource) {
-        checkCudaErrors(cudaGraphicsUnregisterResource(m_computeResource), "cudaGraphicsUnregisterResource");
+        CUDA_SAFE_CALL(cudaGraphicsUnregisterResource(m_computeResource));
         m_computeResource = nullptr;
     }
     if (m_imageResource) {
-        checkCudaErrors(cudaGraphicsUnregisterResource(m_imageResource), "cudaGraphicsUnregisterResource");
+        CUDA_SAFE_CALL(cudaGraphicsUnregisterResource(m_imageResource));
         m_imageResource = nullptr;
     }
 
     // 将纹理注册到 cuda
-    checkCudaErrors(cudaGraphicsGLRegisterImage(&m_computeResource, m_computeTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore),
-                    "cudaGraphicsGLRegisterImage");
+    CUDA_SAFE_CALL(cudaGraphicsGLRegisterImage(&m_computeResource, m_computeTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore));
 
-    checkCudaErrors(cudaGraphicsGLRegisterImage(&m_imageResource, m_imageTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore),
-                    "cudaGraphicsGLRegisterImage");
+    CUDA_SAFE_CALL(cudaGraphicsGLRegisterImage(&m_imageResource, m_imageTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore));
     // 重置帧计数
     m_sceneData.frameCount = 0;
 
@@ -229,11 +225,11 @@ void Scene::createTexture(GLuint* texture, int width, int height, GLuint unit) {
 
 void Scene::computePass() {
     // 将 OpenGL 的纹理资源映射到 CUDA
-    checkCudaErrors(cudaGraphicsMapResources(1, &m_computeResource, 0), "cudaGraphicsMapResources");
+    CUDA_SAFE_CALL(cudaGraphicsMapResources(1, &m_computeResource, 0));
 
     // 获取映射后的 cudaArray
     cudaArray_t textureArray;
-    checkCudaErrors(cudaGraphicsSubResourceGetMappedArray(&textureArray, m_computeResource, 0, 0), "cudaGraphicsSubResourceGetMappedArray");
+    CUDA_SAFE_CALL(cudaGraphicsSubResourceGetMappedArray(&textureArray, m_computeResource, 0, 0));
 
     // 创建资源描述符
     cudaResourceDesc resDesc;
@@ -243,27 +239,27 @@ void Scene::computePass() {
 
     // 创建 CUDA surface 对象
     cudaSurfaceObject_t surfaceObj = 0;
-    checkCudaErrors(cudaCreateSurfaceObject(&surfaceObj, &resDesc), "cudaCreateSurfaceObject");
+    CUDA_SAFE_CALL(cudaCreateSurfaceObject(&surfaceObj, &resDesc));
 
     // 启动 CUDA kernel
     launchKernel(surfaceObj, m_sceneData);
 
     // 销毁 surface 对象
-    checkCudaErrors(cudaDestroySurfaceObject(surfaceObj), "cudaDestroySurfaceObject");
+    CUDA_SAFE_CALL(cudaDestroySurfaceObject(surfaceObj));
 
     // 解除资源映射
-    checkCudaErrors(cudaGraphicsUnmapResources(1, &m_computeResource, 0), "cudaGraphicsUnmapResources");
+    CUDA_SAFE_CALL(cudaGraphicsUnmapResources(1, &m_computeResource, 0));
 }
 
 void Scene::mixPass() {
     // 将 OpenGL 的纹理资源映射到 CUDA
-    checkCudaErrors(cudaGraphicsMapResources(1, &m_computeResource, 0), "cudaGraphicsMapResources");
-    checkCudaErrors(cudaGraphicsMapResources(1, &m_imageResource, 0), "cudaGraphicsMapResources");
+    CUDA_SAFE_CALL(cudaGraphicsMapResources(1, &m_computeResource, 0));
+    CUDA_SAFE_CALL(cudaGraphicsMapResources(1, &m_imageResource, 0));
 
     // 获取映射后的 cudaArray
     cudaArray_t computeArray, imageAray;
-    checkCudaErrors(cudaGraphicsSubResourceGetMappedArray(&computeArray, m_computeResource, 0, 0), "cudaGraphicsSubResourceGetMappedArray");
-    checkCudaErrors(cudaGraphicsSubResourceGetMappedArray(&imageAray, m_imageResource, 0, 0), "cudaGraphicsSubResourceGetMappedArray");
+    CUDA_SAFE_CALL(cudaGraphicsSubResourceGetMappedArray(&computeArray, m_computeResource, 0, 0));
+    CUDA_SAFE_CALL(cudaGraphicsSubResourceGetMappedArray(&imageAray, m_imageResource, 0, 0));
 
     // 创建资源描述符
     cudaResourceDesc computeResDesc, imageResDesc;
@@ -276,19 +272,19 @@ void Scene::mixPass() {
     // 创建 CUDA surface 对象
     cudaSurfaceObject_t computeSurfaceObj = 0;
     cudaSurfaceObject_t imageSurfaceObj   = 0;
-    checkCudaErrors(cudaCreateSurfaceObject(&computeSurfaceObj, &computeResDesc), "cudaCreateSurfaceObject");
-    checkCudaErrors(cudaCreateSurfaceObject(&imageSurfaceObj, &imageResDesc), "cudaCreateSurfaceObject");
+    CUDA_SAFE_CALL(cudaCreateSurfaceObject(&computeSurfaceObj, &computeResDesc));
+    CUDA_SAFE_CALL(cudaCreateSurfaceObject(&imageSurfaceObj, &imageResDesc));
 
     // 启动 CUDA kernel
     launchMixKernel(computeSurfaceObj, imageSurfaceObj, m_sceneData);
 
     // 销毁 surface 对象
-    checkCudaErrors(cudaDestroySurfaceObject(computeSurfaceObj), "cudaDestroySurfaceObject");
-    checkCudaErrors(cudaDestroySurfaceObject(imageSurfaceObj), "cudaDestroySurfaceObject");
+    CUDA_SAFE_CALL(cudaDestroySurfaceObject(computeSurfaceObj));
+    CUDA_SAFE_CALL(cudaDestroySurfaceObject(imageSurfaceObj));
 
     // 解除资源映射
-    checkCudaErrors(cudaGraphicsUnmapResources(1, &m_computeResource, 0), "cudaGraphicsUnmapResources");
-    checkCudaErrors(cudaGraphicsUnmapResources(1, &m_imageResource, 0), "cudaGraphicsUnmapResources");
+    CUDA_SAFE_CALL(cudaGraphicsUnmapResources(1, &m_computeResource, 0));
+    CUDA_SAFE_CALL(cudaGraphicsUnmapResources(1, &m_imageResource, 0));
 }
 
 void Scene::renderShaderPass() {
@@ -342,13 +338,6 @@ void Scene::initializeQuad() {
     m_screenVAO.release();
 }
 
-void Scene::checkCudaErrors(cudaError_t err, const char* msg) {
-    if (err != cudaSuccess) {
-        qFatal() << "CUDA Error:" << msg << "\n    Code:" << static_cast<int>(err) << "\n    Name:" << cudaGetErrorName(err)
-                 << "\n    Description:" << cudaGetErrorString(err);
-    }
-}
-
 void Scene::showFPS() {
     using namespace std::chrono;
     auto elapsed     = high_resolution_clock::now() - m_lastStart;
@@ -377,23 +366,23 @@ void Scene::initSceneConstants() {
 }
 
 void Scene::uploadScene() {
-    cudaMalloc(&m_sceneData.triangles, m_triangles.size() * sizeof(Triangle));
-    cudaMemcpy(m_sceneData.triangles, m_triangles.data(), m_triangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice);
+    CUDA_SAFE_CALL(cudaMalloc(&m_sceneData.triangles, m_triangles.size() * sizeof(Triangle)));
+    CUDA_SAFE_CALL(cudaMemcpy(m_sceneData.triangles, m_triangles.data(), m_triangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice));
     m_sceneData.numTriangles = m_triangles.size();
 
-    cudaMalloc(&m_sceneData.materials, m_materials.size() * sizeof(Material));
-    cudaMemcpy(m_sceneData.materials, m_materials.data(), m_materials.size() * sizeof(Material), cudaMemcpyHostToDevice);
+    CUDA_SAFE_CALL(cudaMalloc(&m_sceneData.materials, m_materials.size() * sizeof(Material)));
+    CUDA_SAFE_CALL(cudaMemcpy(m_sceneData.materials, m_materials.data(), m_materials.size() * sizeof(Material), cudaMemcpyHostToDevice));
     m_sceneData.numMaterials = m_materials.size();
 
-    cudaMalloc(&m_sceneData.bvhNodes, m_bvh.nodes.size() * sizeof(BVHNode));
-    cudaMemcpy(m_sceneData.bvhNodes, m_bvh.nodes.data(), m_bvh.nodes.size() * sizeof(BVHNode), cudaMemcpyHostToDevice);
+    CUDA_SAFE_CALL(cudaMalloc(&m_sceneData.bvhNodes, m_bvh.nodes.size() * sizeof(BVHNode)));
+    CUDA_SAFE_CALL(cudaMemcpy(m_sceneData.bvhNodes, m_bvh.nodes.data(), m_bvh.nodes.size() * sizeof(BVHNode), cudaMemcpyHostToDevice));
     m_sceneData.numBvhNodes = m_bvh.nodes.size();
 }
 
 void Scene::cleanup() {
-    if (m_sceneData.triangles) cudaFree(m_sceneData.triangles);
-    if (m_sceneData.materials) cudaFree(m_sceneData.materials);
-    if (m_sceneData.bvhNodes) cudaFree(m_sceneData.bvhNodes);
+    if (m_sceneData.triangles) CUDA_SAFE_CALL(cudaFree(m_sceneData.triangles));
+    if (m_sceneData.materials) CUDA_SAFE_CALL(cudaFree(m_sceneData.materials));
+    if (m_sceneData.bvhNodes) CUDA_SAFE_CALL(cudaFree(m_sceneData.bvhNodes));
     m_sceneData.triangles = nullptr;
     m_sceneData.materials = nullptr;
     m_sceneData.bvhNodes  = nullptr;
@@ -544,8 +533,6 @@ void Scene::loadScene() {
     uploadScene();
 }
 
-
-
 void Scene::addCube(const vec3& minCorner, const vec3& maxCorner, int materialID, const mat4& transform) {
     // 构造立方体八个角点
     vec3 v000(minCorner.x, minCorner.y, minCorner.z);
@@ -623,11 +610,11 @@ void Scene::addObj(const std::string& filename, int materialID, const mat4& tran
     tinyobj::ObjReader reader;
 
     if (!reader.ParseFromFile(filename, readerConfig)) {
-        if (!reader.Error().empty()) { qWarning() << "TinyObjReader: " << reader.Error(); }
+        if (!reader.Error().empty()) { std::cerr << "TinyObjReader: " << reader.Error(); }
         return;
     }
 
-    if (!reader.Warning().empty()) { qWarning() << "TinyObjReader: " << reader.Warning(); }
+    if (!reader.Warning().empty()) { std::cerr << "TinyObjReader: " << reader.Warning(); }
 
     auto& attrib    = reader.GetAttrib();
     auto& shapes    = reader.GetShapes();
