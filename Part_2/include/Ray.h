@@ -180,6 +180,7 @@ struct Ray {
     PT_CPU_GPU HitResult intersectBVH(const BVHNode* nodes, const Triangle* triangles) {
         HitResult res;
 
+        // 使用栈进行深度优先搜索
         uint32_t stack[STACK_DEPTH];
         int stackIndex = 0;
 

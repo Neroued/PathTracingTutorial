@@ -52,7 +52,8 @@ private:
     // Surface Area Heuristic 寻找最佳分割位置
     uint32_t SAH(uint32_t start, uint32_t end, const Bound& localBound);
 
-    void reorderNodes();                                     // 将节点变为广度优先排序
+    uint32_t reorderNodesRecursive(std::vector<BVHNode>& reordered, uint32_t oldIndex);
+    void reorderNodes();                                     // 将节点变为深度优先排序
     void reorderTriangles(std::vector<Triangle>& triangles); // 按照 prims.index 重排 triangles
 
     Bound getLocalBound(uint32_t start, uint32_t end) const;

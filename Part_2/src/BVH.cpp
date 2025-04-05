@@ -163,7 +163,30 @@ uint32_t BVH::SAH(uint32_t start, uint32_t end, const Bound& localBound) {
     }
 }
 
-void BVH::reorderNodes() {}
+// 返回节点在排序后数组中的位置
+uint32_t BVH::reorderNodesRecursive(std::vector<BVHNode>& reordered, uint32_t oldIndex) {
+    // oldIndex 表示原始数据中的节点位置
+    reordered.push_back(nodes[oldIndex]);
+    uint32_t currentIndex = reordered.size() - 1;
+
+    if (!nodes[oldIndex].isLeaf) {
+        reordered[currentIndex].internal.leftIndex = reorderNodesRecursive(reordered, nodes[oldIndex].internal.leftIndex);
+        reordered[currentIndex].internal.rightIndex = reorderNodesRecursive(reordered, nodes[oldIndex].internal.rightIndex);
+    }
+
+    // 返回移动后节点的位置
+    return currentIndex;
+}
+
+void BVH::reorderNodes() {
+    std::vector<BVHNode> reordered;
+    reordered.reserve(nodes.size());
+
+    // 深度优先，递归将节点存储新数组
+    reorderNodesRecursive(reordered, 0);
+
+    nodes.swap(reordered);
+}
 
 void BVH::reorderTriangles(std::vector<Triangle>& triangles) {
     std::vector<Triangle> reordered(triangles.size());
