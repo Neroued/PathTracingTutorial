@@ -304,6 +304,9 @@ void Scene::renderShaderPass() {
     // 将 uniform "imageTexture" 绑定到纹理单元 0
     m_renderProgram->setUniformValue("imageTexture", 0);
 
+    m_renderProgram->setUniformValue("gamma", m_gamma);
+    m_renderProgram->setUniformValue("exposure", m_exposure);
+
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
     m_screenVAO.release();

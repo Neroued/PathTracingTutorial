@@ -1,4 +1,4 @@
-#include <Scene.h>
+#include <MainWindow.h>
 #include <QApplication>
 #include <QSurfaceFormat>
 
@@ -11,11 +11,9 @@ int main(int argc, char* argv[]) {
 
     QApplication app(argc, argv);
 
-    pt::Scene pt;
-    pt.setFixedSize(pt.size());
+    pt::MainWindow mainWindow;
+    mainWindow.m_scene->loadScene();
 
-    pt.loadScene();
-
-    pt.show();
+    mainWindow.show();
     return app.exec();
 }

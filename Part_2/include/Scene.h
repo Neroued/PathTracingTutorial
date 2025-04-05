@@ -30,6 +30,12 @@ public:
     // 添加obj文件
     void addObj(const std::string& filename, int materialID, const mat4& transform = mat4::identity());
 
+public slots:
+
+    void setExposure(float exposure) { m_exposure = exposure; }
+
+    void setGamma(float gamma) { m_gamma = gamma; }
+
 protected:
     void initializeGL() override;
     void resizeGL(int w, int h) override;
@@ -81,6 +87,10 @@ private:
     std::vector<Material> m_materials;
 
     BVH m_bvh;
+
+    // 控制渲染时颜色映射的参数
+    float m_exposure = -2.8f;
+    float m_gamma    = 2.2f;
 };
 
 END_NAMESPACE_PT

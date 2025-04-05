@@ -40,11 +40,13 @@ set(CPP_SOURCES
     src/BVH.cpp
     src/ImageLoader.cpp
     src/Texture.cpp
+    src/MainWindow.cpp
     tests/PathTracing.cpp)
 
 set(HEADERS
     include/Scene.h
-    include/Material.h)
+    include/Material.h
+    include/MainWindow.h)
 
 set(CUDA_SOURCES
     src/pathTracingKernel.cu
