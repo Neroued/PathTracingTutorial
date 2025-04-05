@@ -8,6 +8,7 @@
 #include <iostream>
 #include <iomanip>
 #include <qlogging.h>
+#include <qopenglext.h>
 #include <qstringtokenizer.h>
 #include "BVH.h"
 #include "Material.h"
@@ -152,6 +153,7 @@ void Scene::paintGL() {
     }
 
     if (m_sceneData.frameCount * SAMPLE_PER_FRAME >= TARGET_SAMPLES && (m_sceneData.frameCount - 1) * SAMPLE_PER_FRAME < TARGET_SAMPLES) {
+        saveImage();
         std::cout << std::endl;
     }
 
@@ -428,8 +430,8 @@ void Scene::loadScene() {
     bottom2.materialID = 1;
     Material bottom;
     bottom.baseColor = WHITE;
-    // m_triangles.push_back(bottom1);
-    // m_triangles.push_back(bottom2);
+    m_triangles.push_back(bottom1);
+    m_triangles.push_back(bottom2);
     m_materials.push_back(bottom);
 
     // top
@@ -439,8 +441,8 @@ void Scene::loadScene() {
     top2.materialID = 2;
     Material top;
     top.baseColor = WHITE;
-    // m_triangles.push_back(top1);
-    // m_triangles.push_back(top2);
+    m_triangles.push_back(top1);
+    m_triangles.push_back(top2);
     m_materials.push_back(top);
 
     // back
@@ -450,8 +452,8 @@ void Scene::loadScene() {
     back2.materialID = 3;
     Material back;
     back.baseColor = CYAN;
-    // m_triangles.push_back(back1);
-    // m_triangles.push_back(back2);
+    m_triangles.push_back(back1);
+    m_triangles.push_back(back2);
     m_materials.push_back(back);
 
     // left
@@ -461,8 +463,8 @@ void Scene::loadScene() {
     left2.materialID = 4;
     Material left;
     left.baseColor = BLUE;
-    // m_triangles.push_back(left1);
-    // m_triangles.push_back(left2);
+    m_triangles.push_back(left1);
+    m_triangles.push_back(left2);
     m_materials.push_back(left);
 
     // right
@@ -472,8 +474,8 @@ void Scene::loadScene() {
     right2.materialID = 5;
     Material right;
     right.baseColor = RED;
-    // m_triangles.push_back(right1);
-    // m_triangles.push_back(right2);
+    m_triangles.push_back(right1);
+    m_triangles.push_back(right2);
     m_materials.push_back(right);
 
     // 添加立方体1（较大）
@@ -531,7 +533,7 @@ void Scene::loadScene() {
 
     // 加载 dragon
     float angleRad  = PI / 2.0f;
-    float scale = 4.0f;
+    float scale     = 2.0f;
     mat4 transform3 = mat4::translation(0.0f, -0.5f, 0.0f) * mat4::rotation(angleRad, vec3(0.0f, 1.0f, 0.0f)) * mat4::scaling(scale, scale, scale);
     addObj("E:\\code\\c++\\PathTracingTutorial\\Part_2\\models\\dragon.obj", mirrorMaterialID, transform3);
 
@@ -678,6 +680,22 @@ void Scene::addObj(const std::string& filename, int materialID, const mat4& tran
             indexOffset += fv;
         }
     }
+}
+
+void Scene::saveImage() {
+    Image img;
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_imageTexture);
+
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &img.width);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &img.height);
+    img.channel = 4;
+
+    img.data.resize(img.width * img.height * img.channel);
+
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, img.data.data()); // 读取纹理内容
+
+    ImageLoader::write(img, "default.hdr");
 }
 
 END_NAMESPACE_PT

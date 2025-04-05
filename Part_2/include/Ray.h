@@ -105,7 +105,7 @@ struct Ray {
     //     float denom = pt::dot(N, d);
 
     //     // 若入射方向与平面平行
-    //     if (pt::abs(denom) < 0.0001f) return res; 
+    //     if (pt::abs(denom) < 0.0001f) return res;
 
     //     // 若光线入射方向为三角形背面，将 N 反转
     //     if (denom > 0.0f) {

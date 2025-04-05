@@ -55,6 +55,8 @@ private:
     // 辅助函数，用来添加方块
     void addCube(const vec3& minCorner, const vec3& maxCorner, int materialID, const mat4& transform = mat4::identity());
 
+    void saveImage();
+
 private:
     QOpenGLShaderProgram* m_renderProgram; // 展示结果的着色器
 

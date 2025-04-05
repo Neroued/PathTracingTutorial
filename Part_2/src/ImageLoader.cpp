@@ -89,7 +89,7 @@ bool ImageLoader::load(Image& image, const std::string& filename) {
     }
 }
 
-bool ImageLoader::write(const Image& image, const std::string& filename) {
+bool ImageLoader::write(const Image& image, const std::string& filename, bool flipY) {
     // 提取文件扩展名
     std::string ext;
     size_t dotPos = filename.find_last_of('.');
@@ -107,6 +107,7 @@ bool ImageLoader::write(const Image& image, const std::string& filename) {
         return false;
     }
 
+    // 只使用三个通道数据
     std::vector<float> rgbData;
     size_t totalPixels = static_cast<size_t>(image.width) * image.height;
     if (image.channel == 3) {
@@ -121,6 +122,16 @@ bool ImageLoader::write(const Image& image, const std::string& filename) {
     } else {
         std::cerr << "ImageLoader: Invalid image" << std::endl;
         return false;
+    }
+
+    // 反转 y 轴
+    if (flipY) {
+        const int rowSize = image.width * 3; // 每行有 width 个像素，每像素 3 个 float
+
+        for (int y = 0; y < image.height / 2; ++y) {
+            int oppositeY = image.height - 1 - y;
+            for (int x = 0; x < rowSize; ++x) { std::swap(rgbData[y * rowSize + x], rgbData[oppositeY * rowSize + x]); }
+        }
     }
 
     if (ext == ".hdr") {

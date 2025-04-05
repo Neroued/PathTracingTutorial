@@ -8,10 +8,10 @@ void main()
 {
     vec3 texCol = texture(imageTexture, TexCoord).rgb;
 
-    // === Tone Mapping（可选：Reinhard / Exponential）===
-    // 方案一：Exponential（柔和一些）
-    // 曝光度 0.5
-    texCol = vec3(1.0) - exp(-texCol * 0.5);
+    // === Tone Mapping ===
+    float exposure = -2.8;
+    float exposureScale = pow(2.0, exposure);
+    texCol = vec3(1.0) - exp(-texCol * exposureScale);
 
     // gamma矫正
     float invGamma = 1.0 / 2.2;

@@ -19,7 +19,7 @@ public:
     static bool load(Image& image, const std::string& filename);
 
     // 根据扩展名保存为不同格式，支持 hdr
-    static bool write(const Image& image, const std::string& filename);
+    static bool write(const Image& image, const std::string& filename, bool flipY = true);
 };
 
 END_NAMESPACE_PT

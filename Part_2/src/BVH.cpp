@@ -170,7 +170,7 @@ uint32_t BVH::reorderNodesRecursive(std::vector<BVHNode>& reordered, uint32_t ol
     uint32_t currentIndex = reordered.size() - 1;
 
     if (!nodes[oldIndex].isLeaf) {
-        reordered[currentIndex].internal.leftIndex = reorderNodesRecursive(reordered, nodes[oldIndex].internal.leftIndex);
+        reordered[currentIndex].internal.leftIndex  = reorderNodesRecursive(reordered, nodes[oldIndex].internal.leftIndex);
         reordered[currentIndex].internal.rightIndex = reorderNodesRecursive(reordered, nodes[oldIndex].internal.rightIndex);
     }
 
