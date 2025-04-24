@@ -433,8 +433,7 @@ void Scene::loadScene() {
     bottom2.materialID = 1;
     Material bottom;
     bottom.baseColor = WHITE;
-    m_triangles.push_back(bottom1);
-    m_triangles.push_back(bottom2);
+
     m_materials.push_back(bottom);
 
     // top
@@ -444,8 +443,7 @@ void Scene::loadScene() {
     top2.materialID = 2;
     Material top;
     top.baseColor = WHITE;
-    m_triangles.push_back(top1);
-    m_triangles.push_back(top2);
+
     m_materials.push_back(top);
 
     // back
@@ -455,8 +453,7 @@ void Scene::loadScene() {
     back2.materialID = 3;
     Material back;
     back.baseColor = CYAN;
-    m_triangles.push_back(back1);
-    m_triangles.push_back(back2);
+
     m_materials.push_back(back);
 
     // left
@@ -466,8 +463,7 @@ void Scene::loadScene() {
     left2.materialID = 4;
     Material left;
     left.baseColor = BLUE;
-    m_triangles.push_back(left1);
-    m_triangles.push_back(left2);
+
     m_materials.push_back(left);
 
     // right
@@ -477,9 +473,23 @@ void Scene::loadScene() {
     right2.materialID = 5;
     Material right;
     right.baseColor = RED;
+
+    m_materials.push_back(right);
+
+    m_triangles.push_back(bottom1);
+    m_triangles.push_back(bottom2);
+
+    m_triangles.push_back(top1);
+    m_triangles.push_back(top2);
+
+    m_triangles.push_back(back1);
+    m_triangles.push_back(back2);
+
+    m_triangles.push_back(left1);
+    m_triangles.push_back(left2);
+
     m_triangles.push_back(right1);
     m_triangles.push_back(right2);
-    m_materials.push_back(right);
 
     // 添加立方体1（较大）
     Material cube1Mat;
@@ -539,6 +549,10 @@ void Scene::loadScene() {
     float scale     = 2.0f;
     mat4 transform3 = mat4::translation(0.0f, -0.5f, 0.0f) * mat4::rotation(angleRad, vec3(0.0f, 1.0f, 0.0f)) * mat4::scaling(scale, scale, scale);
     addObj("E:\\code\\c++\\PathTracingTutorial\\Part_2\\models\\dragon.obj", mirrorMaterialID, transform3);
+
+    // 加载sponza
+    // mat4 transform4 = mat4::scaling(0.005f, 0.005f, 0.005f);
+    // addObj("E:\\code\\c++\\PathTracingTutorial\\Part_2\\models\\sponza\\sponza.obj", mirrorMaterialID, transform4);
 
     // 构建 BVH
     m_bvh.build(m_triangles, 0, m_triangles.size());

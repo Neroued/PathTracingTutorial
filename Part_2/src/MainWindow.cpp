@@ -82,10 +82,10 @@ MainWindow::MainWindow(QWidget* parent) : QWidget(parent) {
         m_scene->setGamma(gamma);
     });
 
-    // 重置按钮点击信号：将两个滑块的值设置为 50
+    // 重置按钮点击信号：将两个滑块的值设置为 500
     connect(resetButton, &QPushButton::clicked, this, [=]() {
-        exposureSlider->setValue(50);
-        gammaSlider->setValue(50);
+        exposureSlider->setValue(500);
+        gammaSlider->setValue(500);
     });
 
     setLayout(mainLayout);

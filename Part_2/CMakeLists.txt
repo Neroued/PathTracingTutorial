@@ -21,10 +21,12 @@ add_compile_options($<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/Zc:__cplusplus>)
 # ========== 选择正确的Qt ==========
 set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};$ENV{QT_MSVC}")
 
-
 # ========== 查找需要的库 ==========
 find_package(OpenGL REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets OpenGL OpenGLWidgets)
+
+# ========== 添加 HDRImageViewer ==========
+add_subdirectory(HDRImageViewer)
 
 # ========== 添加include路径 ==========
 include_directories(include/)
@@ -33,6 +35,9 @@ include_directories(extern/)
 
 # ========== Qt初始化 ==========
 qt_standard_project_setup()
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
 
 # ========== 源文件与头文件 ==========
 set(CPP_SOURCES
@@ -70,6 +75,10 @@ add_executable(testBVH tests/testBVH.cpp src/BVH.cpp)
 add_executable(testTinyObj tests/testTinyObj.cpp ${EXTERN_SOURCES})
 
 add_executable(testImage tests/testImage.cpp src/ImageLoader.cpp)
+
+add_executable(testHDRImageViewer tests/testHDRImageViewer.cpp)
+
+target_link_libraries(testHDRImageViewer PRIVATE HDRImageViewer)
 
 # ========== 链接库 ==========
 target_link_libraries(PathTracing PRIVATE
