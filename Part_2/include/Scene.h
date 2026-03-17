@@ -28,7 +28,8 @@ public:
     void loadScene(); // 加载场景
 
     // 添加obj文件
-    void addObj(const std::string& filename, int materialID, const mat4& transform = mat4::identity());
+    void addObj(const std::string& filename, int materialID,
+                const mat4& transform = mat4::identity());
 
 public slots:
 
@@ -42,15 +43,15 @@ protected:
     void paintGL() override;
 
 private:
-    void compileShaders();                                                   // 编译所需的着色器
+    void compileShaders();   // 编译所需的着色器
 
-    void computePass();                                                      // 计算pass
+    void computePass();      // 计算pass
     void mixPass();
-    void renderShaderPass();                                                 // 渲染pass，展示计算结果
+    void renderShaderPass(); // 渲染pass，展示计算结果
 
-    void uploadScene();                                                      // 上传场景信息至 GPU
+    void uploadScene();      // 上传场景信息至 GPU
 
-    void initializeQuad();                                                   // 初始化全屏四边形
+    void initializeQuad();   // 初始化全屏四边形
     void createTexture(GLuint* texture, int width, int height, GLuint unit); // 创建材质
 
     void initSceneConstants();
@@ -59,7 +60,8 @@ private:
     void cleanup(); // 清除 cuda 分配的资源
 
     // 辅助函数，用来添加方块
-    void addCube(const vec3& minCorner, const vec3& maxCorner, int materialID, const mat4& transform = mat4::identity());
+    void addCube(const vec3& minCorner, const vec3& maxCorner, int materialID,
+                 const mat4& transform = mat4::identity());
 
     void saveImage();
 

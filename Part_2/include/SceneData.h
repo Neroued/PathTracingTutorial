@@ -21,7 +21,7 @@ struct SceneData {
     uint32_t numMaterials;
 
     BVHNode* bvhNodes = nullptr;
-    uint32_t numBvhNodes; 
+    uint32_t numBvhNodes;
 
     cudaTextureObject_t hdrTex;
 };

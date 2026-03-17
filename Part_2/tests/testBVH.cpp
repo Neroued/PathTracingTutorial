@@ -12,8 +12,10 @@ void printBVHRecursive(const BVH& bvh, uint32_t nodeIndex, int level = 0) {
     // 使用缩进表示层级
     std::string indent(level * 2, ' ');
     std::cout << indent << (node.isLeaf ? "Leaf" : "Internal") << " Node:" << std::endl;
-    std::cout << indent << "  Bound min: (" << node.bound.min[0] << ", " << node.bound.min[1] << ", " << node.bound.min[2] << ")" << std::endl;
-    std::cout << indent << "  Bound max: (" << node.bound.max[0] << ", " << node.bound.max[1] << ", " << node.bound.max[2] << ")" << std::endl;
+    std::cout << indent << "  Bound min: (" << node.bound.min[0] << ", " << node.bound.min[1]
+              << ", " << node.bound.min[2] << ")" << std::endl;
+    std::cout << indent << "  Bound max: (" << node.bound.max[0] << ", " << node.bound.max[1]
+              << ", " << node.bound.max[2] << ")" << std::endl;
 
     if (node.isLeaf) {
         std::cout << indent << "  Primitive count: " << node.leaf.primCount << std::endl;
@@ -62,8 +64,10 @@ void testBVHIntersection() {
     if (result.isHit) {
         std::cout << "Intersection detected:" << std::endl;
         std::cout << "  Distance: " << result.distance << std::endl;
-        std::cout << "  Hit Point: (" << result.hitPoint[0] << ", " << result.hitPoint[1] << ", " << result.hitPoint[2] << ")" << std::endl;
-        std::cout << "  Normal: (" << result.normal[0] << ", " << result.normal[1] << ", " << result.normal[2] << ")" << std::endl;
+        std::cout << "  Hit Point: (" << result.hitPoint[0] << ", " << result.hitPoint[1] << ", "
+                  << result.hitPoint[2] << ")" << std::endl;
+        std::cout << "  Normal: (" << result.normal[0] << ", " << result.normal[1] << ", "
+                  << result.normal[2] << ")" << std::endl;
         std::cout << "  Material ID: " << result.materialID << std::endl;
     } else {
         std::cout << "No intersection detected." << std::endl;

@@ -20,7 +20,7 @@ struct Texture {
     ~Texture();
 
     // 禁用拷贝构造/赋值
-    Texture(const Texture&) = delete;
+    Texture(const Texture&)            = delete;
     Texture& operator=(const Texture&) = delete;
 
     // 显式声明移动构造与赋值

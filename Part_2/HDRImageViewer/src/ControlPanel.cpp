@@ -71,9 +71,10 @@ void ControlPanel::setupUi() {
     exposureLayout->addWidget(new QLabel("Exposure:"));
     m_exposureSlider = new QSlider(Qt::Horizontal);
     m_exposureSlider->setRange(EXPOSURE_SLIDER_MIN, EXPOSURE_SLIDER_MAX);
-    m_exposureSlider->setValue(exposureToSliderValue(EXPOSURE_DEFAULT_VALUE)); // Set initial position
+    m_exposureSlider->setValue(
+        exposureToSliderValue(EXPOSURE_DEFAULT_VALUE)); // Set initial position
     m_exposureSlider->setToolTip("Adjust image exposure");
-    exposureLayout->addWidget(m_exposureSlider, 1);                            // Slider takes more space
+    exposureLayout->addWidget(m_exposureSlider, 1);     // Slider takes more space
 
     m_exposureLabel = new QLabel(locale.toString(EXPOSURE_DEFAULT_VALUE, 'f', 2));
     m_exposureLabel->setMinimumWidth(40); // Ensure space for number
@@ -114,8 +115,10 @@ void ControlPanel::updatePixelInfo(int imgX, int imgY, float r, float g, float b
     QLocale locale(QLocale::English, QLocale::UnitedStates);
     m_pixelPosLabel->setText(QString("(%1, %2)").arg(imgX).arg(imgY));
     // Format float colors - adjust precision as needed
-    m_pixelColorLabel->setText(
-        QString("(%1, %2, %3)").arg(locale.toString(r, 'f', 3)).arg(locale.toString(g, 'f', 3)).arg(locale.toString(b, 'f', 3)));
+    m_pixelColorLabel->setText(QString("(%1, %2, %3)")
+                                   .arg(locale.toString(r, 'f', 3))
+                                   .arg(locale.toString(g, 'f', 3))
+                                   .arg(locale.toString(b, 'f', 3)));
 }
 
 void ControlPanel::clearPixelInfo() {
@@ -147,7 +150,8 @@ void ControlPanel::onResetButtonClicked() {
 
 // Linear mapping example
 float ControlPanel::sliderValueToExposure(int value) const {
-    float fraction = static_cast<float>(value - EXPOSURE_SLIDER_MIN) / (EXPOSURE_SLIDER_MAX - EXPOSURE_SLIDER_MIN);
+    float fraction = static_cast<float>(value - EXPOSURE_SLIDER_MIN) /
+                     (EXPOSURE_SLIDER_MAX - EXPOSURE_SLIDER_MIN);
     return EXPOSURE_MIN_VALUE + fraction * (EXPOSURE_MAX_VALUE - EXPOSURE_MIN_VALUE);
 }
 
@@ -155,5 +159,6 @@ int ControlPanel::exposureToSliderValue(float exposure) const {
     // Clamp exposure to the valid range before converting
     exposure       = std::max(EXPOSURE_MIN_VALUE, std::min(exposure, EXPOSURE_MAX_VALUE));
     float fraction = (exposure - EXPOSURE_MIN_VALUE) / (EXPOSURE_MAX_VALUE - EXPOSURE_MIN_VALUE);
-    return EXPOSURE_SLIDER_MIN + static_cast<int>(std::round(fraction * (EXPOSURE_SLIDER_MAX - EXPOSURE_SLIDER_MIN)));
+    return EXPOSURE_SLIDER_MIN +
+           static_cast<int>(std::round(fraction * (EXPOSURE_SLIDER_MAX - EXPOSURE_SLIDER_MIN)));
 }

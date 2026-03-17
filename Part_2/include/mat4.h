@@ -23,36 +23,40 @@ public:
 
     /** @name 构造函数 */
     ///@{
-    PT_CPU_GPU mat4();                                       ///< 默认构造函数：初始化为单位矩阵
-    PT_CPU_GPU mat4(float diagonal);                         ///< 将对角线初始化为给定值的矩阵（其余元素为0）
+    PT_CPU_GPU mat4();               ///< 默认构造函数：初始化为单位矩阵
+    PT_CPU_GPU mat4(float diagonal); ///< 将对角线初始化为给定值的矩阵（其余元素为0）
     PT_CPU_GPU mat4(const mat4& other)            = default; ///< 拷贝构造（支持 GPU）
     PT_CPU_GPU mat4& operator=(const mat4& other) = default; ///< 赋值操作符（支持 GPU）
 
     /// 用16个浮点数初始化矩阵（按行主序提供 m00...m33）
-    PT_CPU_GPU mat4(float m00, float m01, float m02, float m03, float m10, float m11, float m12, float m13, float m20, float m21, float m22,
-                    float m23, float m30, float m31, float m32, float m33);
+    PT_CPU_GPU mat4(float m00, float m01, float m02, float m03, float m10, float m11, float m12,
+                    float m13, float m20, float m21, float m22, float m23, float m30, float m31,
+                    float m32, float m33);
     /// 从包含16个浮点数的数组初始化矩阵（按行主序）
     PT_CPU_GPU explicit mat4(const float values[16]);
     ///@}
 
     /** @name 常用特殊矩阵的静态构造 */
     ///@{
-    PT_CPU_GPU static mat4 identity();                                                          ///< 返回单位矩阵 I
-    PT_CPU_GPU static mat4 zero();                                                              ///< 返回全零矩阵
-    PT_CPU_GPU static mat4 translation(float tx, float ty, float tz);                           ///< 平移矩阵（沿x,y,z方向平移）
-    PT_CPU_GPU static mat4 translation(const vec3& t);                                          ///< 平移矩阵（使用 vec3 提供的位移量）
-    PT_CPU_GPU static mat4 scaling(float sx, float sy, float sz);                               ///< 缩放矩阵（各方向缩放系数）
-    PT_CPU_GPU static mat4 scaling(const vec3& s);                                              ///< 缩放矩阵（使用 vec3 提供各方向缩放系数）
-    PT_CPU_GPU static mat4 rotation(float angleRadians, const vec3& axis);                      ///< 绕任意轴旋转的矩阵（angle 为弧度）
-    PT_CPU_GPU static mat4 rotation(float angleRadians, float axisX, float axisY, float axisZ); ///< 绕指定轴 (axisX, axisY, axisZ) 旋转的矩阵
+    PT_CPU_GPU static mat4 identity();                 ///< 返回单位矩阵 I
+    PT_CPU_GPU static mat4 zero();                     ///< 返回全零矩阵
+    PT_CPU_GPU static mat4 translation(float tx, float ty,
+                                       float tz);      ///< 平移矩阵（沿x,y,z方向平移）
+    PT_CPU_GPU static mat4 translation(const vec3& t); ///< 平移矩阵（使用 vec3 提供的位移量）
+    PT_CPU_GPU static mat4 scaling(float sx, float sy, float sz); ///< 缩放矩阵（各方向缩放系数）
+    PT_CPU_GPU static mat4 scaling(const vec3& s);     ///< 缩放矩阵（使用 vec3 提供各方向缩放系数）
+    PT_CPU_GPU static mat4 rotation(float angleRadians,
+                                    const vec3& axis); ///< 绕任意轴旋转的矩阵（angle 为弧度）
+    PT_CPU_GPU static mat4 rotation(float angleRadians, float axisX, float axisY,
+                                    float axisZ); ///< 绕指定轴 (axisX, axisY, axisZ) 旋转的矩阵
     ///@}
 
     /** @name 元素访问 */
     ///@{
-    PT_CPU_GPU float& operator()(int row, int col);             ///< 访问矩阵第(row行, col列)元素的引用
+    PT_CPU_GPU float& operator()(int row, int col); ///< 访问矩阵第(row行, col列)元素的引用
     PT_CPU_GPU const float& operator()(int row, int col) const; ///< 常量访问矩阵元素
-    PT_CPU_GPU float* data();                                   ///< 返回指向内部数据的指针（float[16]，行主序）
-    PT_CPU_GPU const float* data() const;                       ///< 常量版本的 data()
+    PT_CPU_GPU float* data();             ///< 返回指向内部数据的指针（float[16]，行主序）
+    PT_CPU_GPU const float* data() const; ///< 常量版本的 data()
     ///@}
 
     /** @name 比较操作 */
@@ -92,10 +96,12 @@ public:
 
     /** @name 向量变换操作 */
     ///@{
-    PT_CPU_GPU vec3 transformPoint(const vec3& v) const;  ///< 变换3D点向量 (vec3, w=1) ，会受到平移影响
-    PT_CPU_GPU vec3 transformVector(const vec3& v) const; ///< 变换3D方向向量 (vec3, w=0) ，忽略平移分量
-    PT_CPU_GPU vec4 operator*(const vec4& v) const;       ///< 矩阵与4D向量相乘
-    PT_CPU_GPU vec3 operator*(const vec3& v) const;       ///< 矩阵与3D向量相乘（将vec3视为点，w=1）
+    PT_CPU_GPU vec3
+    transformPoint(const vec3& v) const;            ///< 变换3D点向量 (vec3, w=1) ，会受到平移影响
+    PT_CPU_GPU vec3
+    transformVector(const vec3& v) const;           ///< 变换3D方向向量 (vec3, w=0) ，忽略平移分量
+    PT_CPU_GPU vec4 operator*(const vec4& v) const; ///< 矩阵与4D向量相乘
+    PT_CPU_GPU vec3 operator*(const vec3& v) const; ///< 矩阵与3D向量相乘（将vec3视为点，w=1）
     ///@}
 
     PT_CPU_GPU mat4& translate(const vec3& t);
@@ -117,8 +123,9 @@ PT_CPU_GPU inline mat4::mat4(float diagonal) {
     m[0] = m[5] = m[10] = m[15] = diagonal;
 }
 
-PT_CPU_GPU inline mat4::mat4(float m00, float m01, float m02, float m03, float m10, float m11, float m12, float m13, float m20, float m21, float m22,
-                             float m23, float m30, float m31, float m32, float m33) {
+PT_CPU_GPU inline mat4::mat4(float m00, float m01, float m02, float m03, float m10, float m11,
+                             float m12, float m13, float m20, float m21, float m22, float m23,
+                             float m30, float m31, float m32, float m33) {
     m[0]  = m00;
     m[1]  = m01;
     m[2]  = m02;
@@ -211,7 +218,9 @@ PT_CPU_GPU inline mat4 mat4::rotation(float angleRadians, float ax, float ay, fl
     return result;
 }
 
-PT_CPU_GPU inline mat4 mat4::rotation(float angleRadians, const vec3& axis) { return rotation(angleRadians, axis.x, axis.y, axis.z); }
+PT_CPU_GPU inline mat4 mat4::rotation(float angleRadians, const vec3& axis) {
+    return rotation(angleRadians, axis.x, axis.y, axis.z);
+}
 
 // 元素访问
 PT_CPU_GPU inline float& mat4::operator()(int row, int col) { return m[row * 4 + col]; }

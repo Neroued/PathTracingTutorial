@@ -50,7 +50,8 @@ Texture::Texture(const Image& img) {
 
     // 拷贝内存
     size_t pitch = img.width * img.channel * sizeof(float);
-    CUDA_SAFE_CALL(cudaMemcpy2DToArray(cuArray, 0, 0, img.data.data(), pitch, pitch, img.height, cudaMemcpyHostToDevice));
+    CUDA_SAFE_CALL(cudaMemcpy2DToArray(cuArray, 0, 0, img.data.data(), pitch, pitch, img.height,
+                                       cudaMemcpyHostToDevice));
 
     // 定义资源描述符
     cudaResourceDesc resDesc;

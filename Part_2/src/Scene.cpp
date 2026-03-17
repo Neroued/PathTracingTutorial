@@ -27,7 +27,8 @@
 BEGIN_NAMESPACE_PT
 
 Scene::Scene(QWidget* parent)
-    : QOpenGLWidget(parent), m_renderProgram(nullptr), m_computeTexture(0), m_imageTexture(0), m_computeResource(nullptr), m_imageResource(nullptr),
+    : QOpenGLWidget(parent), m_renderProgram(nullptr), m_computeTexture(0), m_imageTexture(0),
+      m_computeResource(nullptr), m_imageResource(nullptr),
       m_screenVBO(QOpenGLBuffer::VertexBuffer) {
     m_sceneData.width  = WIDTH;
     m_sceneData.height = HEIGHT;
@@ -83,9 +84,11 @@ void Scene::initializeGL() {
     createTexture(&m_imageTexture, m_sceneData.width, m_sceneData.height, 1);   // binding = 1
 
     // 将纹理注册到 cuda
-    CUDA_SAFE_CALL(cudaGraphicsGLRegisterImage(&m_computeResource, m_computeTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore));
+    CUDA_SAFE_CALL(cudaGraphicsGLRegisterImage(&m_computeResource, m_computeTexture, GL_TEXTURE_2D,
+                                               cudaGraphicsRegisterFlagsSurfaceLoadStore));
 
-    CUDA_SAFE_CALL(cudaGraphicsGLRegisterImage(&m_imageResource, m_imageTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore));
+    CUDA_SAFE_CALL(cudaGraphicsGLRegisterImage(&m_imageResource, m_imageTexture, GL_TEXTURE_2D,
+                                               cudaGraphicsRegisterFlagsSurfaceLoadStore));
 
     // -------------------------------
     // 构建全屏四边形（屏幕四边形）的 VAO/VBO
@@ -130,9 +133,11 @@ void Scene::resizeGL(int w, int h) {
     }
 
     // 将纹理注册到 cuda
-    CUDA_SAFE_CALL(cudaGraphicsGLRegisterImage(&m_computeResource, m_computeTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore));
+    CUDA_SAFE_CALL(cudaGraphicsGLRegisterImage(&m_computeResource, m_computeTexture, GL_TEXTURE_2D,
+                                               cudaGraphicsRegisterFlagsSurfaceLoadStore));
 
-    CUDA_SAFE_CALL(cudaGraphicsGLRegisterImage(&m_imageResource, m_imageTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsSurfaceLoadStore));
+    CUDA_SAFE_CALL(cudaGraphicsGLRegisterImage(&m_imageResource, m_imageTexture, GL_TEXTURE_2D,
+                                               cudaGraphicsRegisterFlagsSurfaceLoadStore));
     // 重置帧计数
     m_sceneData.frameCount = 0;
 
@@ -152,7 +157,8 @@ void Scene::paintGL() {
         mixPass();
     }
 
-    if (m_sceneData.frameCount * SAMPLE_PER_FRAME >= TARGET_SAMPLES && (m_sceneData.frameCount - 1) * SAMPLE_PER_FRAME < TARGET_SAMPLES) {
+    if (m_sceneData.frameCount * SAMPLE_PER_FRAME >= TARGET_SAMPLES &&
+        (m_sceneData.frameCount - 1) * SAMPLE_PER_FRAME < TARGET_SAMPLES) {
         saveImage();
         std::cout << std::endl;
     }
@@ -180,11 +186,15 @@ void Scene::compileShaders() {
     // 编译顶点与片段着色器程序
     // ----------------------
     m_renderProgram = new QOpenGLShaderProgram();
-    if (!m_renderProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, "E:\\code\\c++\\PathTracingTutorial\\Part_2\\shaders\\pt_vertex.glsl")) {
+    if (!m_renderProgram->addShaderFromSourceFile(
+            QOpenGLShader::Vertex,
+            "E:\\workspace\\PathTracingTutorial\\Part_2\\shaders\\pt_vertex.glsl")) {
         qWarning() << "Failed to compile vertex shader:" << m_renderProgram->log();
         return;
     }
-    if (!m_renderProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, "E:\\code\\c++\\PathTracingTutorial\\Part_2\\shaders\\pt_fragment.glsl")) {
+    if (!m_renderProgram->addShaderFromSourceFile(
+            QOpenGLShader::Fragment,
+            "E:\\workspace\\PathTracingTutorial\\Part_2\\shaders\\pt_fragment.glsl")) {
         qWarning() << "Failed to compile fragment shader:" << m_renderProgram->log();
         return;
     }
@@ -341,7 +351,8 @@ void Scene::initializeQuad() {
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), reinterpret_cast<void*>(0));
     // 属性 1：纹理坐标（2 个浮点数），偏移为 2*sizeof(float)
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), reinterpret_cast<void*>(2 * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
+                          reinterpret_cast<void*>(2 * sizeof(float)));
 
     m_screenVAO.release();
 }
@@ -351,10 +362,13 @@ void Scene::showFPS() {
     auto elapsed     = high_resolution_clock::now() - m_lastStart;
     auto duration_ms = duration_cast<milliseconds>(elapsed);
     if (m_elapsedFrameCount == 10 || duration_ms.count() >= 100) {
-        float fps              = m_elapsedFrameCount * 1000.0f / static_cast<float>(duration_ms.count());
-        auto total_duration_ms = duration_cast<milliseconds>(high_resolution_clock::now() - m_start);
-        std::cout << std::fixed << std::setprecision(2) << "\rFPS: " << fps << " Elapsed time: " << static_cast<float>(duration_ms.count()) / 1000.0f
-                  << "s" << " Total frames: " << m_sceneData.frameCount << " Total time: " << static_cast<float>(total_duration_ms.count()) / 1000.0f
+        float fps = m_elapsedFrameCount * 1000.0f / static_cast<float>(duration_ms.count());
+        auto total_duration_ms =
+            duration_cast<milliseconds>(high_resolution_clock::now() - m_start);
+        std::cout << std::fixed << std::setprecision(2) << "\rFPS: " << fps
+                  << " Elapsed time: " << static_cast<float>(duration_ms.count()) / 1000.0f << "s"
+                  << " Total frames: " << m_sceneData.frameCount
+                  << " Total time: " << static_cast<float>(total_duration_ms.count()) / 1000.0f
                   << "s     " << std::flush;
         m_elapsedFrameCount = 0;
         m_lastStart         = high_resolution_clock::now();
@@ -375,15 +389,18 @@ void Scene::initSceneConstants() {
 
 void Scene::uploadScene() {
     CUDA_SAFE_CALL(cudaMalloc(&m_sceneData.triangles, m_triangles.size() * sizeof(Triangle)));
-    CUDA_SAFE_CALL(cudaMemcpy(m_sceneData.triangles, m_triangles.data(), m_triangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice));
+    CUDA_SAFE_CALL(cudaMemcpy(m_sceneData.triangles, m_triangles.data(),
+                              m_triangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice));
     m_sceneData.numTriangles = m_triangles.size();
 
     CUDA_SAFE_CALL(cudaMalloc(&m_sceneData.materials, m_materials.size() * sizeof(Material)));
-    CUDA_SAFE_CALL(cudaMemcpy(m_sceneData.materials, m_materials.data(), m_materials.size() * sizeof(Material), cudaMemcpyHostToDevice));
+    CUDA_SAFE_CALL(cudaMemcpy(m_sceneData.materials, m_materials.data(),
+                              m_materials.size() * sizeof(Material), cudaMemcpyHostToDevice));
     m_sceneData.numMaterials = m_materials.size();
 
     CUDA_SAFE_CALL(cudaMalloc(&m_sceneData.bvhNodes, m_bvh.nodes.size() * sizeof(BVHNode)));
-    CUDA_SAFE_CALL(cudaMemcpy(m_sceneData.bvhNodes, m_bvh.nodes.data(), m_bvh.nodes.size() * sizeof(BVHNode), cudaMemcpyHostToDevice));
+    CUDA_SAFE_CALL(cudaMemcpy(m_sceneData.bvhNodes, m_bvh.nodes.data(),
+                              m_bvh.nodes.size() * sizeof(BVHNode), cudaMemcpyHostToDevice));
     m_sceneData.numBvhNodes = m_bvh.nodes.size();
 
     m_sceneData.hdrTex = m_hdrTex.cuTexture;
@@ -522,37 +539,45 @@ void Scene::loadScene() {
 
     // 镜面反射材质
     Material mirrorMat;
-    mirrorMat.baseColor    = YELLOW;
+    mirrorMat.baseColor    = WHITE;
     mirrorMat.specularRate = 0.9f;
     mirrorMat.roughness    = 0.3f;
     m_materials.push_back(mirrorMat);
     int mirrorMaterialID = m_materials.size() - 1;
 
     // 在右边添加一个平片镜子
-    Triangle mirror1   = Triangle(vec3(1, -1, -0.7), vec3(1, 1, -0.7), vec3(0.5, 1, -1));  // 右下， 右上， 左上
-    Triangle mirror2   = Triangle(vec3(1, -1, -0.7), vec3(0.5, 1, -1), vec3(0.5, -1, -1)); // 右下， 左上， 左下
+    Triangle mirror1 =
+        Triangle(vec3(1, -1, -0.7), vec3(1, 1, -0.7), vec3(0., 1, -1)); // 右下， 右上， 左上
+    Triangle mirror2 =
+        Triangle(vec3(1, -1, -0.7), vec3(0., 1, -1), vec3(0., -1, -1)); // 右下， 左上， 左下
     mirror1.materialID = mirrorMaterialID;
     mirror2.materialID = mirrorMaterialID;
-    // m_triangles.push_back(mirror1);
-    // m_triangles.push_back(mirror2);
+    m_triangles.push_back(mirror1);
+    m_triangles.push_back(mirror2);
 
     // 加载一个茶杯
     mat4 tranform1 = mat4::translation(0.0f, -1.0f, 0.0f) * mat4::scaling(0.01f, 0.01f, 0.01f);
-    // addObj("E:\\code\\c++\\PathTracingTutorial\\Part_2\\models\\teapot.obj", mirrorMaterialID, tranform1);
+    // addObj("E:\\code\\c++\\PathTracingTutorial\\Part_2\\models\\teapot.obj", mirrorMaterialID,
+    // tranform1);
 
     // 加载 bunny
     mat4 tranform2 = mat4::translation(0.5f, -0.48f, 0.15f) * mat4::scaling(2.5f, 2.5f, 2.5f);
-    // addObj("E:\\code\\c++\\PathTracingTutorial\\Part_2\\models\\Stanford Bunny.obj", 2, tranform2);
+    // addObj("E:\\code\\c++\\PathTracingTutorial\\Part_2\\models\\Stanford Bunny.obj", 2,
+    // tranform2);
 
     // 加载 dragon
     float angleRad  = PI / 2.0f;
     float scale     = 2.0f;
-    mat4 transform3 = mat4::translation(0.0f, -0.5f, 0.0f) * mat4::rotation(angleRad, vec3(0.0f, 1.0f, 0.0f)) * mat4::scaling(scale, scale, scale);
-    addObj("E:\\code\\c++\\PathTracingTutorial\\Part_2\\models\\dragon.obj", mirrorMaterialID, transform3);
+    mat4 transform3 = mat4::translation(0.0f, -0.5f, 0.0f) *
+                      mat4::rotation(angleRad, vec3(0.0f, 1.0f, 0.0f)) *
+                      mat4::scaling(scale, scale, scale);
+    addObj("E:/workspace/PathTracingTutorial/Part_2/models/dragon.obj", mirrorMaterialID,
+           transform3);
 
     // 加载sponza
     // mat4 transform4 = mat4::scaling(0.005f, 0.005f, 0.005f);
-    // addObj("E:\\code\\c++\\PathTracingTutorial\\Part_2\\models\\sponza\\sponza.obj", mirrorMaterialID, transform4);
+    // addObj("E:\\code\\c++\\PathTracingTutorial\\Part_2\\models\\sponza\\sponza.obj",
+    // mirrorMaterialID, transform4);
 
     // 构建 BVH
     m_bvh.build(m_triangles, 0, m_triangles.size());
@@ -562,14 +587,16 @@ void Scene::loadScene() {
 
     // 加载 hdr 贴图
     Image img;
-    ImageLoader::load(img, "E:\\code\\c++\\PathTracingTutorial\\Part_2\\models\\brown_photostudio_02_4k.hdr");
+    ImageLoader::load(img,
+                      "E:/workspace/PathTracingTutorial/Part_2/models/brown_photostudio_02_4k.hdr");
 
     m_hdrTex = Texture(img);
 
     uploadScene();
 }
 
-void Scene::addCube(const vec3& minCorner, const vec3& maxCorner, int materialID, const mat4& transform) {
+void Scene::addCube(const vec3& minCorner, const vec3& maxCorner, int materialID,
+                    const mat4& transform) {
     // 构造立方体八个角点
     vec3 v000(minCorner.x, minCorner.y, minCorner.z);
     vec3 v001(minCorner.x, minCorner.y, maxCorner.z);

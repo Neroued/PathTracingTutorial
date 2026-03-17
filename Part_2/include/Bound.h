@@ -57,7 +57,8 @@ struct alignas(16) Bound {
     PT_CPU_GPU vec3 offset(const vec3& v) const {
         vec3 o = v - min;
         vec3 d = diagonal();
-        return vec3((d.x > 0.0f) ? o.x / d.x : 0.0f, (d.y > 0.0f) ? o.y / d.y : 0.0f, (d.z > 0.0f) ? o.z / d.z : 0.0f);
+        return vec3((d.x > 0.0f) ? o.x / d.x : 0.0f, (d.y > 0.0f) ? o.y / d.y : 0.0f,
+                    (d.z > 0.0f) ? o.z / d.z : 0.0f);
     }
 
     PT_CPU_GPU vec3 centroid() const { return 0.5f * max + 0.5f * min; }
@@ -69,9 +70,13 @@ struct alignas(16) Bound {
     }
 
 private:
-    PT_CPU_GPU vec3 minVec(const vec3& a, const vec3& b) { return vec3(pt::min(a.x, b.x), pt::min(a.y, b.y), pt::min(a.z, b.z)); }
+    PT_CPU_GPU vec3 minVec(const vec3& a, const vec3& b) {
+        return vec3(pt::min(a.x, b.x), pt::min(a.y, b.y), pt::min(a.z, b.z));
+    }
 
-    PT_CPU_GPU vec3 maxVec(const vec3& a, const vec3& b) { return vec3(pt::max(a.x, b.x), pt::max(a.y, b.y), pt::max(a.z, b.z)); }
+    PT_CPU_GPU vec3 maxVec(const vec3& a, const vec3& b) {
+        return vec3(pt::max(a.x, b.x), pt::max(a.y, b.y), pt::max(a.z, b.z));
+    }
 };
 
 END_NAMESPACE_PT

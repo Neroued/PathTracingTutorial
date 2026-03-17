@@ -22,7 +22,8 @@ struct HitResult {
     vec3 hitPoint;
     vec3 normal;
 
-    PT_CPU_GPU HitResult() : isHit(false), distance(float_max()), materialID(-1), hitPoint(), normal() {}
+    PT_CPU_GPU HitResult()
+        : isHit(false), distance(float_max()), materialID(-1), hitPoint(), normal() {}
 };
 
 struct Ray {

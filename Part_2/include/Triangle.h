@@ -23,11 +23,13 @@ struct alignas(16) Triangle {
         n3 = n2 = n1;
     }
 
-    Triangle(const vec3& P1, const vec3& P2, const vec3& P3, const vec3& N1, const vec3& N2, const vec3& N3)
+    Triangle(const vec3& P1, const vec3& P2, const vec3& P3, const vec3& N1, const vec3& N2,
+             const vec3& N3)
         : p1(P1), p2(P2), p3(P3), n1(N1.normalize()), n2(N2.normalize()), n3(N3.normalize()) {}
 
     Triangle(const Triangle& other)
-        : p1(other.p1), p2(other.p2), p3(other.p3), n1(other.n1), n2(other.n2), n3(other.n3), materialID(other.materialID) {}
+        : p1(other.p1), p2(other.p2), p3(other.p3), n1(other.n1), n2(other.n2), n3(other.n3),
+          materialID(other.materialID) {}
 
     Triangle& operator=(const Triangle& other) {
         if (this != &other) {
@@ -43,8 +45,9 @@ struct alignas(16) Triangle {
     }
 
     Triangle(Triangle&& other) noexcept
-        : p1(std::move(other.p1)), p2(std::move(other.p2)), p3(std::move(other.p3)), n1(std::move(other.n1)), n2(std::move(other.n2)),
-          n3(std::move(other.n3)), materialID(other.materialID) {}
+        : p1(std::move(other.p1)), p2(std::move(other.p2)), p3(std::move(other.p3)),
+          n1(std::move(other.n1)), n2(std::move(other.n2)), n3(std::move(other.n3)),
+          materialID(other.materialID) {}
 
     Triangle& operator=(Triangle&& other) noexcept {
         if (this != &other) {

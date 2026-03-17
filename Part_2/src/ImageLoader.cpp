@@ -51,7 +51,9 @@ bool ImageLoader::load(Image& image, const std::string& filename) {
         image.data.assign(data, data + totalFloats);
         stbi_image_free(data);
         // 确保 alpha 通道数据为 1.0f
-        for (size_t i = 0; i < static_cast<size_t>(width) * height; ++i) { image.data[i * 4 + 3] = 1.0f; }
+        for (size_t i = 0; i < static_cast<size_t>(width) * height; ++i) {
+            image.data[i * 4 + 3] = 1.0f;
+        }
         std::cout << "ImageLoader: Load HDR image: " << filename << std::endl;
         return true;
     } else if (ext == ".jpg" || ext == ".jpeg" || ext == ".png") {
@@ -130,7 +132,9 @@ bool ImageLoader::write(const Image& image, const std::string& filename, bool fl
 
         for (int y = 0; y < image.height / 2; ++y) {
             int oppositeY = image.height - 1 - y;
-            for (int x = 0; x < rowSize; ++x) { std::swap(rgbData[y * rowSize + x], rgbData[oppositeY * rowSize + x]); }
+            for (int x = 0; x < rowSize; ++x) {
+                std::swap(rgbData[y * rowSize + x], rgbData[oppositeY * rowSize + x]);
+            }
         }
     }
 
@@ -158,9 +162,11 @@ bool ImageLoader::write(const Image& image, const std::string& filename, bool fl
         // 根据扩展名选择
         int result = 0;
         if (ext == ".png") {
-            result = stbi_write_png(filename.c_str(), image.width, image.height, 3, outData.data(), image.width * 3);
+            result = stbi_write_png(filename.c_str(), image.width, image.height, 3, outData.data(),
+                                    image.width * 3);
         } else if (ext == ".jpg" || ext == "jpeg") {
-            result = stbi_write_jpg(filename.c_str(), image.width, image.height, 3, outData.data(), 90);
+            result =
+                stbi_write_jpg(filename.c_str(), image.width, image.height, 3, outData.data(), 90);
         } else if (ext == ".bmp") {
             result = stbi_write_bmp(filename.c_str(), image.width, image.height, 3, outData.data());
         } else if (ext == ".tga") {

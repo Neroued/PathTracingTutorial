@@ -3,15 +3,18 @@
 #include <QApplication>
 #include <QMouseEvent>
 #include <QWheelEvent>
+#include <QCursor>
 #include <QtMath>
 #include <cstddef>
 
 
 // 定义用于渲染全屏(或视口)四边形的顶点数据
-const float quadVertices[] = {-1.0f, 1.0f, 0.0f, 1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, -1.0f, 1.0f, 0.0f,
-                              -1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  -1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  1.0f, 1.0f};
+const float quadVertices[] = {-1.0f, 1.0f,  0.0f, 1.0f, -1.0f, -1.0f, 0.0f, 0.0f,
+                              1.0f,  -1.0f, 1.0f, 0.0f, -1.0f, 1.0f,  0.0f, 1.0f,
+                              1.0f,  -1.0f, 1.0f, 0.0f, 1.0f,  1.0f,  1.0f, 1.0f};
 
-ImageWidget::ImageWidget(QWidget* parent) : QOpenGLWidget(parent), m_vbo(QOpenGLBuffer::VertexBuffer) {
+ImageWidget::ImageWidget(QWidget* parent)
+    : QOpenGLWidget(parent), m_vbo(QOpenGLBuffer::VertexBuffer) {
     Q_INIT_RESOURCE(shaders);
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
@@ -46,7 +49,25 @@ void ImageWidget::setImageData(const float* data, int width, int height) {
     // 发送信号
     emit imageInfoChanged(m_imageWidth, m_imageHeight);
     emit scaleChanged(m_scale);
-    emit pixelInfoCleared();
+
+    // 图像更新后尝试在当前鼠标位置获取像素信息
+    bool emittedPixelInfo = false;
+    if (m_imageWidth > 0 && m_imageHeight > 0) {
+        if (m_viewMatrixNeedsUpdate) { updateViewMatrix(); }
+
+        QPoint widgetPos = mapFromGlobal(QCursor::pos());
+        if (rect().contains(widgetPos)) {
+            QPointF imageCoords = mapWidgetToImageCoords(widgetPos);
+            int imgX            = qFloor(imageCoords.x());
+            int imgY            = qFloor(imageCoords.y());
+            float r, g, b;
+            if (getPixelColorAt(imgX, imgY, r, g, b)) {
+                emit pixelInfoUpdated(imgX, imgY, r, g, b);
+                emittedPixelInfo = true;
+            }
+        }
+    }
+    if (!emittedPixelInfo) { emit pixelInfoCleared(); }
 
     // 请求重绘
     update();
@@ -66,7 +87,7 @@ void ImageWidget::updateTexture() {
         m_texture->setFormat(QOpenGLTexture::RGB32F); // 三通道 HDR 格式
         m_texture->setSize(m_imageWidth, m_imageHeight);
         m_texture->setWrapMode(QOpenGLTexture::ClampToEdge);
-        m_texture->setMinificationFilter(QOpenGLTexture::Nearest);                // 线性插值
+        m_texture->setMinificationFilter(QOpenGLTexture::Nearest);                // 临近插值
         m_texture->setMagnificationFilter(QOpenGLTexture::Nearest);
         m_texture->allocateStorage(QOpenGLTexture::RGB, QOpenGLTexture::Float32); // 分配内存
     }
@@ -113,7 +134,9 @@ void ImageWidget::paintGL() {
     glClear(GL_COLOR_BUFFER_BIT);
 
     // 检查着色器与纹理状态
-    if (!m_shaderProgram || !m_shaderProgram->isLinked() || !m_texture || !m_texture->isCreated()) { return; }
+    if (!m_shaderProgram || !m_shaderProgram->isLinked() || !m_texture || !m_texture->isCreated()) {
+        return;
+    }
 
     // 绘制
     m_shaderProgram->bind();
@@ -232,7 +255,8 @@ bool ImageWidget::loadShaders() {
     }
 
     // 从文件加载片段着色器
-    if (!m_shaderProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/fragment.glsl")) {
+    if (!m_shaderProgram->addShaderFromSourceFile(QOpenGLShader::Fragment,
+                                                  ":/shaders/fragment.glsl")) {
         qCritical() << "Failed to compile fragment shader:" << m_shaderProgram->log();
         delete m_shaderProgram;
         m_shaderProgram = nullptr;
@@ -367,7 +391,7 @@ QPointF ImageWidget::mapWidgetToImageCoords(const QPointF& widgetPos) const {
     // 计算 NDC 坐标
     float ndcX = (widgetPos.x() / width()) * 2.0f - 1.0f;
     float ndcY = 1.0f - (widgetPos.y() / height()) * 2.0f;
-    
+
     // 将 NDC 坐标转换为模型坐标
     QVector3D modelCoords = m_invViewMatrix.map(QVector3D(ndcX, ndcY, 0.0f));
 
@@ -393,7 +417,7 @@ void ImageWidget::resetViewAndParams() {
     m_exposure = 1.0f;
     emit exposureChanged(m_exposure);
 
-    m_translation = {0.0f, 0.0f};
+    m_translation           = {0.0f, 0.0f};
     m_viewMatrixNeedsUpdate = true;
     update();
     emit pixelInfoCleared();

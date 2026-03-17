@@ -1,0 +1,5 @@
+{
+    "clangd.arguments": [
+        "--query-driver=C:/Program Files/Microsoft Visual Studio/*/VC/Tools/MSVC/*/bin/Hostx64/x64/cl.exe;**/clang-cl.exe",
+    ]
+}

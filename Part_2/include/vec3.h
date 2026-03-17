@@ -7,7 +7,8 @@
 
 BEGIN_NAMESPACE_PT
 
-// 使用 alignas(16) 保证 vec3 内存按 16 字节对齐，尽管三个 float 实际占 12 字节，但这种对齐可以提升 SIMD 以及 GPU 内存访问效率
+// 使用 alignas(16) 保证 vec3 内存按 16 字节对齐，尽管三个 float 实际占 12 字节，但这种对齐可以提升
+// SIMD 以及 GPU 内存访问效率
 struct alignas(16) vec3 {
     float x, y, z;
 
@@ -34,7 +35,9 @@ struct alignas(16) vec3 {
     PT_CPU_GPU vec3 operator*(float s) const { return vec3(x * s, y * s, z * s); }
 
     // 分量乘法
-    PT_CPU_GPU vec3 operator*(const vec3& other) const { return vec3(x * other.x, y * other.y, z * other.z); }
+    PT_CPU_GPU vec3 operator*(const vec3& other) const {
+        return vec3(x * other.x, y * other.y, z * other.z);
+    }
 
     // 标量除法：向量的每个分量除以标量 s
     PT_CPU_GPU vec3 operator/(float s) const { return vec3(x / s, y / s, z / s); }
@@ -94,7 +97,9 @@ struct alignas(16) vec3 {
 
     // 叉乘运算，数学公式为：
     //   cross(v, b) = (y*b.z - z*b.y, z*b.x - x*b.z, x*b.y - y*b.x)
-    PT_CPU_GPU vec3 cross(const vec3& b) const { return vec3(y * b.z - z * b.y, z * b.x - x * b.z, x * b.y - y * b.x); }
+    PT_CPU_GPU vec3 cross(const vec3& b) const {
+        return vec3(y * b.z - z * b.y, z * b.x - x * b.z, x * b.y - y * b.x);
+    }
 
     // 计算向量的长度（欧几里得范数）：|v| = sqrt(x^2 + y^2 + z^2)
     PT_CPU_GPU float length() const {

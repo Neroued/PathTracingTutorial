@@ -24,7 +24,9 @@ void BVH::build(std::vector<Triangle>& triangles, uint32_t start, uint32_t end) 
     prims.clear();
     prims.resize(triangles.size());
 
-    for (size_t i = 0; i < triangles.size(); ++i) { prims[i] = BVHPrimitive(triangles[i].getBound(), i); }
+    for (size_t i = 0; i < triangles.size(); ++i) {
+        prims[i] = BVHPrimitive(triangles[i].getBound(), i);
+    }
 
     // 预留节点空间
     nodes.resize(2 * triangles.size());
@@ -170,8 +172,10 @@ uint32_t BVH::reorderNodesRecursive(std::vector<BVHNode>& reordered, uint32_t ol
     uint32_t currentIndex = reordered.size() - 1;
 
     if (!nodes[oldIndex].isLeaf) {
-        reordered[currentIndex].internal.leftIndex  = reorderNodesRecursive(reordered, nodes[oldIndex].internal.leftIndex);
-        reordered[currentIndex].internal.rightIndex = reorderNodesRecursive(reordered, nodes[oldIndex].internal.rightIndex);
+        reordered[currentIndex].internal.leftIndex =
+            reorderNodesRecursive(reordered, nodes[oldIndex].internal.leftIndex);
+        reordered[currentIndex].internal.rightIndex =
+            reorderNodesRecursive(reordered, nodes[oldIndex].internal.rightIndex);
     }
 
     // 返回移动后节点的位置

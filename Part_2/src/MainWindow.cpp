@@ -28,7 +28,8 @@ MainWindow::MainWindow(QWidget* parent) : QWidget(parent) {
     // Exposure 控制 —— 标签与数值放在同一行
     QLabel* exposureLabel = new QLabel("Exposure", controlPanel);
     // 映射关系：exposure = value / 10.0f - 7.8f
-    QLabel* exposureValueLabel        = new QLabel(QString::number(static_cast<float>(50) / 10.0f - 7.8f), controlPanel);
+    QLabel* exposureValueLabel =
+        new QLabel(QString::number(static_cast<float>(50) / 10.0f - 7.8f), controlPanel);
     QHBoxLayout* exposureHeaderLayout = new QHBoxLayout();
     exposureHeaderLayout->setSpacing(5);
     exposureHeaderLayout->addWidget(exposureLabel);
@@ -44,7 +45,8 @@ MainWindow::MainWindow(QWidget* parent) : QWidget(parent) {
     // Gamma 控制 —— 标签与数值放在同一行
     QLabel* gammaLabel = new QLabel("Gamma", controlPanel);
     // 映射关系：gamma = value / 50.0f + 1.2f
-    QLabel* gammaValueLabel        = new QLabel(QString::number(static_cast<float>(50) / 50.0f + 1.2f), controlPanel);
+    QLabel* gammaValueLabel =
+        new QLabel(QString::number(static_cast<float>(50) / 50.0f + 1.2f), controlPanel);
     QHBoxLayout* gammaHeaderLayout = new QHBoxLayout();
     gammaHeaderLayout->setSpacing(5);
     gammaHeaderLayout->addWidget(gammaLabel);

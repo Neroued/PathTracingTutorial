@@ -121,7 +121,9 @@ inline PT_CPU_GPU pt::vec2 normalize(const pt::vec2& v) { return v.normalize(); 
 // 2D 叉乘运算（返回标量），数学公式为：
 //   cross(a, b) = a.x * b.y - a.y * b.x
 // 此值在二维中等价于扩展到三维时 z 分量的大小（方向由右手定则确定）
-inline PT_CPU_GPU float cross(const pt::vec2& a, const pt::vec2& b) { return a.x * b.y - a.y * b.x; }
+inline PT_CPU_GPU float cross(const pt::vec2& a, const pt::vec2& b) {
+    return a.x * b.y - a.y * b.x;
+}
 
 END_NAMESPACE_PT
 

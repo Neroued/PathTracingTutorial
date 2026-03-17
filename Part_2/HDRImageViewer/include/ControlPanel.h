@@ -32,7 +32,7 @@ public slots:
     // 清除显示的像素信息
     void clearPixelInfo();
 
-    // 更新曝光滑块的数值 
+    // 更新曝光滑块的数值
     void updateExposureDisplay(float exposure);
 
 private slots:
