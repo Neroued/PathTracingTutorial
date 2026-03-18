@@ -9,6 +9,7 @@
   "render": {
     "spp": 1024,
     "samplePerFrame": 4,
+    "sampler": "sobol",
     "maxDepth": 8,
     "output": "output.hdr"
   },

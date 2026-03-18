@@ -57,11 +57,11 @@ PT_D inline uint32_t hashMix(uint32_t x) {
 }
 
 PT_D inline uint32_t owenHash(uint32_t x, uint32_t seed) {
-    x ^= x * 0x3d20adeau;
     x += seed;
-    x *= (seed >> 16) | 1u;
-    x ^= x * 0x05526c56u;
-    x ^= x * 0x53a22864u;
+    x ^= x * 0x6c50b47cu;
+    x ^= x * 0xb82f1e52u;
+    x ^= x * 0xc7afe638u;
+    x ^= x * 0x8d22f6e6u;
     return x;
 }
 
@@ -84,7 +84,12 @@ PT_D inline uint32_t dimensionSeed(int px, int py, uint32_t dim) {
     return h;
 }
 
-// ---- Sobol Sampler ----
+// ---- Sobol Sampler (PBRT v4 PaddedSobolSampler approach) ----
+//
+// Key design: each get1D()/get2D() call generates a per-dimension shuffled
+// sample index via Owen scramble. This ensures different sampling dimensions
+// see independent parts of the Sobol sequence, eliminating inter-dimension
+// correlation that plagued the previous global-shuffle approach.
 
 struct SobolSampler {
     uint32_t sampleIndex;
@@ -100,19 +105,33 @@ struct SobolSampler {
     }
 
     PT_D float get1D() {
-        uint32_t baseDim = dimension & 1u;
-        uint32_t raw = (baseDim == 0) ? sobolDim0(sampleIndex) : sobolDim1(sampleIndex);
-        uint32_t seed = dimensionSeed(px, py, dimension);
-        uint32_t scrambled = owenScramble(raw, seed);
+        uint32_t hash = dimensionSeed(px, py, dimension);
+        uint32_t shuffledIdx = owenScramble(sampleIndex, hash);
+
+        uint32_t raw = sobolDim0(shuffledIdx);
+        uint32_t scrambled = owenScramble(raw, hashMix(hash));
+
         dimension++;
         constexpr float scale = 1.0f / 4294967296.0f;
         return pt::min(static_cast<float>(scrambled) * scale, 0.99999994f);
     }
 
     PT_D vec2 get2D() {
-        float u = get1D();
-        float v = get1D();
-        return vec2(u, v);
+        uint32_t hash = dimensionSeed(px, py, dimension);
+        uint32_t shuffledIdx = owenScramble(sampleIndex, hash);
+
+        uint32_t raw0 = sobolDim0(shuffledIdx);
+        uint32_t raw1 = sobolDim1(shuffledIdx);
+
+        uint32_t seed0 = hashMix(hash);
+        uint32_t seed1 = hashMix(seed0);
+        uint32_t scrambled0 = owenScramble(raw0, seed0);
+        uint32_t scrambled1 = owenScramble(raw1, seed1);
+
+        dimension += 2;
+        constexpr float scale = 1.0f / 4294967296.0f;
+        return vec2(pt::min(static_cast<float>(scrambled0) * scale, 0.99999994f),
+                    pt::min(static_cast<float>(scrambled1) * scale, 0.99999994f));
     }
 };
 
