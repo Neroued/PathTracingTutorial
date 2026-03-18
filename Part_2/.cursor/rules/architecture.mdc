@@ -1,0 +1,72 @@
+---
+description: Path Tracing Tutorial Part_2 项目架构规范。对 src/ 下的任何修改均须遵守。
+globs:
+  - src/**
+---
+
+# 项目架构规范
+
+## 模块划分与职责
+
+每个目录有明确的职责边界，新增代码必须放入对应模块：
+
+| 目录 | 职责 | 允许的依赖 |
+|---|---|---|
+| `math/` | 向量、矩阵、数学工具、采样分布 | 仅 `pt.h` |
+| `core/` | Ray、SurfaceInteraction 等核心数据类型 | `math/` |
+| `geometry/` | Vertex、TriangleFace、网格操作 | `math/`, `core/` |
+| `accel/` | BVH 构建与遍历 | `math/`, `core/`, `geometry/` |
+| `materials/` | Material 定义、BSDF 评估/采样、着色工具 | `math/`, `core/`, `geometry/`, `scene/`(仅 DeviceSceneView) |
+| `lights/` | 光源类型、环境贴图、光源采样与 PDF | `math/`, `core/`, `geometry/`, `scene/`(仅 DeviceSceneView) |
+| `camera/` | 相机参数 | `math/` |
+| `samplers/` | 随机数生成器 (PCG, Sobol, Sampler) | `math/` |
+| `integrators/` | 路径追踪内核、直接光照估计 | 可依赖所有模块 |
+| `film/` | 胶片/图像累积、质量度量 | `math/`, `cuda/` |
+| `scene/` | 场景数据、DeviceSceneView、场景加载 | 可依赖所有模块 |
+| `io/` | 文件 I/O (图片、GLTF) | `math/`, `materials/`, `geometry/`, `scene/` |
+| `cuda/` | CUDA 工具 (错误检查、缓冲区、纹理) | 仅 CUDA runtime |
+
+## 关键规则
+
+### 1. 禁止在积分器中内嵌可复用类型
+
+`integrators/` 下的 `.cu` 文件只能包含积分器核心逻辑（路径追踪循环、kernel 入口、launch 函数）。任何可被其他模块复用的 struct、函数（采样器分发、着色工具、光源 PDF、直接光照估计等）必须放到对应模块的 `.h` 或 `.cuh` 头文件中。
+
+### 2. `d_params`（`__constant__` 内存）仅限 kernel 入口使用
+
+`d_params` 是 CUDA `__constant__` 内存，只能在 `kernelPathTrace` 和 `emitRay` 等 kernel 内部直接读取。所有其他可复用函数（Sampler、直接光照估计等）必须通过参数传递所需数据，不得隐式依赖 `d_params`。
+
+### 3. 文件大小警戒线
+
+单个 `.cu` / `.cuh` / `.h` 文件不超过 **500 行**。超过此限制时应考虑拆分，但前提是拆分后各部分的模块职责仍然清晰——不要为了凑行数而制造职责模糊的碎片文件。
+
+### 4. 新功能放置指南
+
+- **新的采样策略** → `samplers/` 目录，实现对应的 `.cuh` 头文件，在 `Sampler` struct 中增加分发
+- **新的 BSDF/材质** → `materials/` 目录
+- **新的光源类型** → `lights/` 目录
+- **新的积分器** → `integrators/` 目录下新建 `.cu` 文件
+- **着色/法线贴图/UV 工具** → `materials/shading_utils.cuh`
+- **光源 PDF 评估** → `lights/light_pdf.cuh`
+- **直接光照/NEE** → `integrators/direct_lighting.cuh`
+
+### 5. 头文件风格
+
+- CUDA device 代码使用 `.cuh` 后缀
+- 纯 host 代码使用 `.h` 后缀
+- 所有头文件使用 `#pragma once`
+- 使用 `PT_D` / `PT_HD` 宏替代裸写 `__device__` / `__host__ __device__`（在 `.cuh` 中可直接用 `__device__`）
+
+### 6. 模板的使用
+
+`template <typename Rng>` 用于 BSDF 采样函数是正确的——它让材质层不依赖具体的采样器实现。其他场景下，优先使用 `Sampler` 结构体作为统一接口，避免不必要的模板化。
+
+### 7. 修改前检查清单
+
+在修改任何 `src/` 文件前，确认：
+
+1. 新代码是否放在了正确的模块目录下？
+2. 是否引入了跨模块的反向依赖（如 `math/` 依赖 `scene/`）？
+3. 修改后目标文件是否超过 500 行？
+4. 是否在 `integrators/*.cu` 中新增了可复用的 struct 或 helper 函数？如果是，请抽离。
+5. `CMakeLists.txt` 的 `PT_CORE_HEADERS` 列表是否包含了所有新增头文件？

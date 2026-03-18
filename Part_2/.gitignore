@@ -4,3 +4,11 @@ build/
 out/
 utils/.cache/
 utils/compile_commands.json
+
+# Generated / runtime files
+*.hdr
+*.csv
+imgui.ini
+
+# Binary assets (use git-lfs or distribute separately)
+models/

@@ -1,0 +1,55 @@
+{
+  "camera": {
+    "position": [0, 0, 4],
+    "lookAt": [0, 0, 0],
+    "up": [0, 1, 0],
+    "fov": 45,
+    "resolution": [800, 800]
+  },
+  "render": {
+    "spp": 512,
+    "samplePerFrame": 4,
+    "maxDepth": 8,
+    "output": "env_diffuse.hdr"
+  },
+  "environment": {
+    "file": "../default.hdr"
+  },
+  "materials": {
+    "white": { "baseColor": [0.9, 0.9, 0.9], "roughness": 1.0 },
+    "red":   { "baseColor": [0.9, 0.25, 0.25], "roughness": 1.0 },
+    "blue":  { "baseColor": [0.25, 0.25, 0.9], "roughness": 1.0 }
+  },
+  "objects": [
+    {
+      "type": "quad",
+      "name": "floor",
+      "vertices": [[1, -1, 1], [1, -1, -1], [-1, -1, -1], [-1, -1, 1]],
+      "material": "white"
+    },
+    {
+      "type": "quad",
+      "name": "ceiling",
+      "vertices": [[1, 1, 1], [-1, 1, 1], [-1, 1, -1], [1, 1, -1]],
+      "material": "white"
+    },
+    {
+      "type": "quad",
+      "name": "back",
+      "vertices": [[1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, -1]],
+      "material": "white"
+    },
+    {
+      "type": "quad",
+      "name": "left",
+      "vertices": [[-1, -1, -1], [-1, 1, -1], [-1, 1, 1], [-1, -1, 1]],
+      "material": "blue"
+    },
+    {
+      "type": "quad",
+      "name": "right",
+      "vertices": [[1, -1, 1], [1, 1, 1], [1, 1, -1], [1, -1, -1]],
+      "material": "red"
+    }
+  ]
+}

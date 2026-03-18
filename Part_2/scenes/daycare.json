@@ -1,0 +1,83 @@
+{
+  "camera": {
+    "aperture": 0.0,
+    "focalDistance": 10.0,
+    "fov": 90.0,
+    "lookAt": [
+      -139.1626739501953,
+      5.93985652923584,
+      327.3396301269531
+    ],
+    "position": [
+      -169.53662109375,
+      15.54941177368164,
+      297.21942138671875
+    ],
+    "resolution": [
+      1600,
+      1410
+    ],
+    "up": [
+      0.0,
+      1.0,
+      0.0
+    ]
+  },
+  "environment": {
+    "file": "../models/kloofendal_48d_partly_cloudy_puresky_4k.hdr"
+  },
+  "lights": [
+    {
+      "color": [
+        1,
+        0.95,
+        0.9
+      ],
+      "direction": [
+        -0.4,
+        -0.8,
+        -0.5
+      ],
+      "intensity": 4.0,
+      "type": "directional"
+    },
+    {
+      "color": [
+        0.7,
+        0.8,
+        1.0
+      ],
+      "direction": [
+        0.5,
+        -0.3,
+        0.6
+      ],
+      "intensity": 1.5,
+      "type": "directional"
+    }
+  ],
+  "objects": [
+    {
+      "file": "../models/fnaf_sb_daycare_playarea.glb",
+      "materialOverrides": {
+        "Banner_00.mat": {
+          "emissiveStrength": 15.0
+        },
+        "MAT_Phone": {
+          "emissiveStrength": 10.0
+        },
+        "RainBow.mat": {
+          "emissiveStrength": 30.0
+        }
+      },
+      "name": "daycare",
+      "type": "gltf"
+    }
+  ],
+  "render": {
+    "maxDepth": 8,
+    "output": "daycare.hdr",
+    "samplePerFrame": 4,
+    "spp": 1024
+  }
+}
