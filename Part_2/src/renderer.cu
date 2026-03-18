@@ -1,66 +1,33 @@
 #include "renderer.h"
-#include "scene/scene_loader.h"
-#include "accel/bvh_builder.h"
+#include "scene/scene_manager.h"
+#include "integrators/integrator.h"
 #include "io/image_io.h"
-#include "lights/light_sampler.h"
 #include "cuda/check.h"
 
 #include <iostream>
 #include <iomanip>
 #include <chrono>
-#include <filesystem>
 
 namespace pt {
 
-void Renderer::loadScene(const std::string& path) {
-    scenePath_ = path;
-    SceneLoader::load(path, hostScene_);
-}
-
-void Renderer::saveScene(const Camera& cam) {
-    if (scenePath_.empty()) return;
-    namespace fs = std::filesystem;
-    std::string ext = fs::path(scenePath_).extension().string();
-    for (auto& c : ext) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-    if (ext != ".json") {
-        std::cerr << "Renderer::saveScene: can only save to .json scenes" << std::endl;
-        return;
-    }
-    SceneLoader::saveCamera(scenePath_, cam);
-}
-
-void Renderer::buildAccel() {
-    std::cout << "Building BVH..." << std::endl;
-    BVHBuilder builder;
-    hostScene_.bvh = builder.build(hostScene_.vertices, hostScene_.faces, 0,
-                                   static_cast<uint32_t>(hostScene_.faces.size()));
-    buildEmissiveTriangleSampler(hostScene_.vertices, hostScene_.faces,
-                                 hostScene_.materials, hostScene_.lightSampler);
-    buildEnvironmentSampler(hostScene_.hdrImage, hostScene_.lightSampler);
-    std::cout << "BVH: " << hostScene_.bvh.nodes.size() << " nodes, "
-              << hostScene_.faces.size() << " faces, "
-              << hostScene_.vertices.size() << " vertices, "
-              << hostScene_.lightSampler.emissiveTriangles.size() << " emissive triangles"
-              << std::endl;
-}
-
-void Renderer::uploadToDevice() {
-    deviceScene_.uploadFrom(hostScene_);
-    film_.init(hostScene_.camera.width, hostScene_.camera.height);
-    std::cout << "Scene uploaded to GPU (sampler: "
-              << (hostScene_.settings.samplerType == 1 ? "sobol" : "pcg") << ")" << std::endl;
+Renderer::Renderer(SceneManager& scene, std::unique_ptr<Integrator> integrator)
+    : scene_(scene), integrator_(std::move(integrator))
+{
+    const Camera& cam = scene_.camera();
+    film_.init(cam.width, cam.height);
 }
 
 uint32_t Renderer::renderBatch() {
-    auto view   = deviceScene_.view();
-    auto params = deviceScene_.buildParams();
+    auto& dev   = scene_.deviceScene();
+    auto view   = dev.view();
+    auto params = dev.buildParams();
 
     cudaEvent_t t0, t1;
     CUDA_CHECK(cudaEventCreate(&t0));
     CUDA_CHECK(cudaEventCreate(&t1));
 
     CUDA_CHECK(cudaEventRecord(t0));
-    launchPathTraceKernel(film_.newSurface(), film_.accSurface(), view, params);
+    integrator_->launch(film_.newSurface(), film_.accSurface(), view, params);
     CUDA_CHECK(cudaEventRecord(t1));
     CUDA_CHECK(cudaEventSynchronize(t1));
 
@@ -73,8 +40,25 @@ uint32_t Renderer::renderBatch() {
     CUDA_CHECK(cudaEventDestroy(t0));
     CUDA_CHECK(cudaEventDestroy(t1));
 
-    deviceScene_.frameCount++;
+    dev.frameCount++;
     return currentSpp();
+}
+
+uint32_t Renderer::currentSpp() const {
+    auto& dev = scene_.deviceScene();
+    return dev.frameCount * dev.samplePerFrame;
+}
+
+uint32_t Renderer::targetSpp() const {
+    return scene_.deviceScene().targetSamples;
+}
+
+bool Renderer::isComplete() const {
+    return currentSpp() >= static_cast<uint32_t>(targetSpp());
+}
+
+int Renderer::samplePerFrame() const {
+    return scene_.deviceScene().samplePerFrame;
 }
 
 void Renderer::printTimingReport() const {
@@ -85,7 +69,7 @@ void Renderer::printTimingReport() const {
 }
 
 void Renderer::resetAccumulation() {
-    deviceScene_.frameCount = 0;
+    scene_.deviceScene().frameCount = 0;
     film_.clear();
     totalTraceMs_ = 0.0f;
     lastBatchMs_  = 0.0f;
@@ -94,8 +78,8 @@ void Renderer::resetAccumulation() {
 
 void Renderer::resize(int w, int h) {
     if (w == film_.width() && h == film_.height()) return;
-    deviceScene_.camera.width  = w;
-    deviceScene_.camera.height = h;
+    scene_.deviceScene().camera.width  = w;
+    scene_.deviceScene().camera.height = h;
     film_.init(w, h);
     resetAccumulation();
 }

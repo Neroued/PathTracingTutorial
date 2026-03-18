@@ -60,13 +60,13 @@ __device__ inline uint32_t sampleAlias(const AliasEntry* table, uint32_t n, floa
 
 __device__ inline uint32_t sampleEmissiveTriangleIndex(const DeviceSceneView& scene,
                                                        Sampler& sampler) {
-    return sampleAlias(scene.triangleAlias, scene.numEmissiveTriangles,
+    return sampleAlias(scene.lights.triangleAlias, scene.lights.numEmissiveTriangles,
                        sampler.get1D(), sampler.get1D());
 }
 
 __device__ inline uint32_t sampleEnvTexelIndex(const DeviceSceneView& scene,
                                                Sampler& sampler) {
-    return sampleAlias(scene.envAlias, scene.numEnvTexels,
+    return sampleAlias(scene.lights.envAlias, scene.lights.numEnvTexels,
                        sampler.get1D(), sampler.get1D());
 }
 
@@ -77,10 +77,10 @@ __device__ inline DirectLightSample sampleAreaLight(const DeviceSceneView& scene
                                                     const vec3& normal,
                                                     Sampler& sampler) {
     DirectLightSample sample;
-    if (scene.numEmissiveTriangles == 0 || scene.emissiveTriangles == nullptr) return sample;
+    if (scene.lights.numEmissiveTriangles == 0 || scene.lights.emissiveTriangles == nullptr) return sample;
 
     const EmissiveTriangleRef& ref =
-        scene.emissiveTriangles[sampleEmissiveTriangleIndex(scene, sampler)];
+        scene.lights.emissiveTriangles[sampleEmissiveTriangleIndex(scene, sampler)];
     const TriangleFace& face = scene.faces[ref.triangleIndex];
     const Vertex& va = scene.vertices[face.v0];
     const Vertex& vb = scene.vertices[face.v1];
@@ -125,17 +125,17 @@ __device__ inline DirectLightSample sampleEnvironmentLight(const DeviceSceneView
                                                            const vec3& normal,
                                                            Sampler& sampler) {
     DirectLightSample sample;
-    if (scene.hdrTex == 0 || scene.envAlias == nullptr || scene.numEnvTexels == 0 ||
-        scene.envWidth <= 0 || scene.envHeight <= 0) {
+    if (scene.lights.hdrTex == 0 || scene.lights.envAlias == nullptr || scene.lights.numEnvTexels == 0 ||
+        scene.lights.envWidth <= 0 || scene.lights.envHeight <= 0) {
         return sample;
     }
 
     uint32_t texel = sampleEnvTexelIndex(scene, sampler);
-    int x = static_cast<int>(texel % static_cast<uint32_t>(scene.envWidth));
-    int y = static_cast<int>(texel / static_cast<uint32_t>(scene.envWidth));
+    int x = static_cast<int>(texel % static_cast<uint32_t>(scene.lights.envWidth));
+    int y = static_cast<int>(texel / static_cast<uint32_t>(scene.lights.envWidth));
 
-    vec2 uv((static_cast<float>(x) + sampler.get1D()) / static_cast<float>(scene.envWidth),
-            (static_cast<float>(y) + sampler.get1D()) / static_cast<float>(scene.envHeight));
+    vec2 uv((static_cast<float>(x) + sampler.get1D()) / static_cast<float>(scene.lights.envWidth),
+            (static_cast<float>(y) + sampler.get1D()) / static_cast<float>(scene.lights.envHeight));
     vec3 wi = directionFromSphericalMap(uv);
 
     float cosSurf = pt::max(0.0f, dot(normal, wi));
@@ -147,7 +147,7 @@ __device__ inline DirectLightSample sampleEnvironmentLight(const DeviceSceneView
     if (isOccluded(scene, si.point, normal, wi, Infinity)) return sample;
 
     sample.wi       = wi;
-    sample.radiance = sampleEnvironmentRadiance(scene.hdrTex, wi);
+    sample.radiance = sampleEnvironmentRadiance(scene.lights.hdrTex, wi);
     sample.pdf      = pdf;
     sample.valid    = true;
     return sample;
@@ -161,12 +161,12 @@ __device__ inline vec3 evaluatePunctualLights(const DeviceSceneView& scene,
                                                const vec3& wo,
                                                const vec3& normal,
                                                const vec3& tangent) {
-    if (scene.numPunctualLights == 0 || scene.punctualLights == nullptr)
+    if (scene.lights.numPunctualLights == 0 || scene.lights.punctualLights == nullptr)
         return vec3(0.0f);
 
     vec3 Ld(0.0f);
-    for (uint32_t i = 0; i < scene.numPunctualLights; ++i) {
-        const PunctualLight& light = scene.punctualLights[i];
+    for (uint32_t i = 0; i < scene.lights.numPunctualLights; ++i) {
+        const PunctualLight& light = scene.lights.punctualLights[i];
 
         vec3 wi;
         float dist = Infinity;
@@ -224,9 +224,9 @@ __device__ inline vec3 estimateDirectLighting(const DeviceSceneView& scene,
                                               const vec3& normal,
                                               const vec3& tangent,
                                               Sampler& sampler) {
-    bool hasArea = (scene.numEmissiveTriangles > 0 && scene.emissiveTriangles != nullptr);
-    bool hasEnv  = (scene.hdrTex != 0 && scene.envAlias != nullptr && scene.numEnvTexels > 0 &&
-                    scene.envWidth > 0 && scene.envHeight > 0);
+    bool hasArea = (scene.lights.numEmissiveTriangles > 0 && scene.lights.emissiveTriangles != nullptr);
+    bool hasEnv  = (scene.lights.hdrTex != 0 && scene.lights.envAlias != nullptr && scene.lights.numEnvTexels > 0 &&
+                    scene.lights.envWidth > 0 && scene.lights.envHeight > 0);
 
     if (!hasArea && !hasEnv) return vec3(0.0f);
 

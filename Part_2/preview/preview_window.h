@@ -10,11 +10,13 @@ using GLFWscrollfun = void(*)(GLFWwindow*, double, double);
 
 namespace pt {
 
+class SceneManager;
 class Renderer;
 
 class PreviewWindow {
 public:
-    PreviewWindow(Renderer& renderer, int w, int h,
+    PreviewWindow(SceneManager& sceneManager, Renderer& renderer,
+                  int w, int h,
                   const std::string& vertShader,
                   const std::string& fragShader);
     ~PreviewWindow();
@@ -25,10 +27,11 @@ public:
     void run();
 
 private:
-    GLFWwindow* window_   = nullptr;
-    GLDisplay   display_;
-    ImGuiLayer  imgui_;
-    Renderer*   renderer_ = nullptr;
+    GLFWwindow*   window_       = nullptr;
+    GLDisplay     display_;
+    ImGuiLayer    imgui_;
+    SceneManager* sceneManager_ = nullptr;
+    Renderer*     renderer_     = nullptr;
 
     int width_;
     int height_;

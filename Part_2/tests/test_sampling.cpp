@@ -60,8 +60,10 @@ static void test_emissive_triangle_sampler() {
     CHECK(sampler.emissiveTriangles.size() == 2);
     CHECK(sampler.triangleSelectionPmf.size() == faces.size());
     CHECK(approx(sampler.triangleSelectionPmf[0], 0.0f));
-    CHECK(approx(sampler.triangleSelectionPmf[1], 2.0f / 3.0f, 1e-5f));
-    CHECK(approx(sampler.triangleSelectionPmf[2], 1.0f / 3.0f, 1e-5f));
+    // Triangle 1: area=0.5, luminance(emittedRadiance)=2.0 → weight=1.0
+    // Triangle 2: area=1.0, luminance(emittedRadiance)=1.0 → weight=1.0
+    CHECK(approx(sampler.triangleSelectionPmf[1], 0.5f, 1e-5f));
+    CHECK(approx(sampler.triangleSelectionPmf[2], 0.5f, 1e-5f));
     CHECK(approx(sampler.emissiveTriangles.back().cdf, 1.0f));
 }
 

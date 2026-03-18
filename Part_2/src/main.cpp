@@ -1,4 +1,6 @@
+#include "scene/scene_manager.h"
 #include "renderer.h"
+#include "integrators/path_integrator.h"
 #include "film/quality_metrics.h"
 
 #ifdef PT_HAS_PREVIEW
@@ -64,14 +66,16 @@ int main(int argc, char* argv[]) {
         if (fs::exists(inProject)) scenePath = inProject.string();
     }
 
-    pt::Renderer renderer;
-    renderer.loadScene(scenePath);
+    pt::SceneManager sceneManager;
+    sceneManager.load(scenePath);
     if (sppOverride > 0)
-        renderer.setSpp(sppOverride);
+        sceneManager.setSpp(sppOverride);
     if (samplerOverride >= 0)
-        renderer.setSampler(samplerOverride);
-    renderer.buildAccel();
-    renderer.uploadToDevice();
+        sceneManager.setSampler(samplerOverride);
+    sceneManager.buildAccel();
+    sceneManager.uploadToDevice();
+
+    pt::Renderer renderer(sceneManager, std::make_unique<pt::PathIntegrator>());
 
 #ifdef PT_HAS_PREVIEW
     if (preview) {
@@ -86,9 +90,9 @@ int main(int argc, char* argv[]) {
         if (!fs::exists(vertPath)) vertPath = "preview/fullscreen_quad.vert";
         if (!fs::exists(fragPath)) fragPath = "preview/tone_mapping.frag";
 
-        pt::PreviewWindow win(renderer,
-                              renderer.camera().width,
-                              renderer.camera().height,
+        pt::PreviewWindow win(sceneManager, renderer,
+                              sceneManager.camera().width,
+                              sceneManager.camera().height,
                               vertPath, fragPath);
         win.run();
         return 0;
@@ -104,11 +108,11 @@ int main(int argc, char* argv[]) {
         std::vector<int> checkpoints = {16, 32, 64, 128, 256, 512, 1024};
         std::string csvPath = "convergence.csv";
 
-        // Render high-SPP reference in memory (avoids file flip / precision issues)
         std::cout << "=== Rendering reference image (4096 spp, sobol) ===" << std::endl;
-        renderer.setSampler(1);
-        renderer.setSpp(4096);
-        renderer.uploadToDevice();
+        sceneManager.setSampler(1);
+        sceneManager.setSpp(4096);
+        sceneManager.uploadToDevice();
+        renderer.resetAccumulation();
         renderer.renderAll();
         std::vector<float> refData;
         renderer.downloadCurrentImage(refData);
@@ -119,9 +123,9 @@ int main(int argc, char* argv[]) {
         // Benchmark PCG
         {
             std::cout << "\n=== Benchmark: PCG ===" << std::endl;
-            renderer.setSampler(0);
-            renderer.setSpp(checkpoints.back());
-            renderer.uploadToDevice();
+            sceneManager.setSampler(0);
+            sceneManager.setSpp(checkpoints.back());
+            sceneManager.uploadToDevice();
             auto results = renderer.runConvergenceBenchmark(refData.data(), checkpoints);
             pt::printConvergenceTable(results, "pcg");
             pt::writeConvergenceCSV(csvPath, results, "pcg");
@@ -130,9 +134,9 @@ int main(int argc, char* argv[]) {
         // Benchmark Sobol
         {
             std::cout << "\n=== Benchmark: Sobol ===" << std::endl;
-            renderer.setSampler(1);
-            renderer.setSpp(checkpoints.back());
-            renderer.uploadToDevice();
+            sceneManager.setSampler(1);
+            sceneManager.setSpp(checkpoints.back());
+            sceneManager.uploadToDevice();
             auto results = renderer.runConvergenceBenchmark(refData.data(), checkpoints);
             pt::printConvergenceTable(results, "sobol");
             pt::writeConvergenceCSV(csvPath, results, "sobol");
@@ -142,7 +146,7 @@ int main(int argc, char* argv[]) {
     }
 
     renderer.renderAll();
-    renderer.saveImage(renderer.outputPath());
+    renderer.saveImage(sceneManager.outputPath());
 
     return 0;
 }

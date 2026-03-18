@@ -20,9 +20,9 @@ globs:
 | `lights/` | 光源类型、环境贴图、光源采样与 PDF | `math/`, `core/`, `geometry/`, `scene/`(仅 DeviceSceneView) |
 | `camera/` | 相机参数 | `math/` |
 | `samplers/` | 随机数生成器 (PCG, Sobol, Sampler) | `math/` |
-| `integrators/` | 路径追踪内核、直接光照估计 | 可依赖所有模块 |
+| `integrators/` | Integrator 接口、路径追踪内核、直接光照估计 | 可依赖所有模块 |
 | `film/` | 胶片/图像累积、质量度量 | `math/`, `cuda/` |
-| `scene/` | 场景数据、DeviceSceneView、场景加载 | 可依赖所有模块 |
+| `scene/` | 场景数据、DeviceSceneView/DeviceLightView、SceneManager、场景加载 | 可依赖所有模块 |
 | `io/` | 文件 I/O (图片、GLTF) | `math/`, `materials/`, `geometry/`, `scene/` |
 | `cuda/` | CUDA 工具 (错误检查、缓冲区、纹理) | 仅 CUDA runtime |
 
@@ -45,7 +45,7 @@ globs:
 - **新的采样策略** → `samplers/` 目录，实现对应的 `.cuh` 头文件，在 `Sampler` struct 中增加分发
 - **新的 BSDF/材质** → `materials/` 目录
 - **新的光源类型** → `lights/` 目录
-- **新的积分器** → `integrators/` 目录下新建 `.cu` 文件
+- **新的积分器** → `integrators/` 目录下新建 `.h` + `.cu` 文件，继承 `Integrator` 接口
 - **着色/法线贴图/UV 工具** → `materials/shading_utils.cuh`
 - **光源 PDF 评估** → `lights/light_pdf.cuh`
 - **直接光照/NEE** → `integrators/direct_lighting.cuh`

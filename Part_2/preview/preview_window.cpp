@@ -1,4 +1,5 @@
 #include "preview_window.h"
+#include "scene/scene_manager.h"
 #include "renderer.h"
 
 #include <imgui.h>
@@ -10,10 +11,12 @@
 
 namespace pt {
 
-PreviewWindow::PreviewWindow(Renderer& renderer, int w, int h,
+PreviewWindow::PreviewWindow(SceneManager& sceneManager, Renderer& renderer,
+                             int w, int h,
                              const std::string& vertShader,
                              const std::string& fragShader)
-    : renderer_(&renderer), width_(w), height_(h),
+    : sceneManager_(&sceneManager), renderer_(&renderer),
+      width_(w), height_(h),
       editWidth_(w), editHeight_(h),
       vertShaderPath_(vertShader), fragShaderPath_(fragShader)
 {
@@ -24,7 +27,7 @@ PreviewWindow::PreviewWindow(Renderer& renderer, int w, int h,
     glfwSetWindowUserPointer(window_, this);
     prevScrollCb_ = glfwSetScrollCallback(window_, scrollCallback);
 
-    cameraCtrl_.init(renderer_->camera());
+    cameraCtrl_.init(sceneManager_->camera());
 }
 
 PreviewWindow::~PreviewWindow() {
@@ -119,7 +122,7 @@ void PreviewWindow::mainLoop() {
         cameraCtrl_.moveSpeed_ = moveSpeed_;
         if (mouseControlEnabled_ && !ImGui::GetIO().WantCaptureMouse) {
             if (cameraCtrl_.update(window_, scrollAccum_, dt)) {
-                renderer_->updateCamera(cameraCtrl_.camera());
+                sceneManager_->updateCamera(cameraCtrl_.camera());
                 renderer_->resetAccumulation();
                 activeTime = 0.0f;
             }
@@ -176,11 +179,11 @@ void PreviewWindow::mainLoop() {
         stats.samplePerFrame       = renderer_->samplePerFrame();
         stats.filmWidth            = renderer_->filmWidth();
         stats.filmHeight           = renderer_->filmHeight();
-        stats.numVertices          = renderer_->numVertices();
-        stats.numFaces             = renderer_->numFaces();
-        stats.numBvhNodes          = renderer_->numBvhNodes();
-        stats.numMaterials         = renderer_->numMaterials();
-        stats.numEmissiveTriangles = renderer_->numEmissiveTriangles();
+        stats.numVertices          = sceneManager_->numVertices();
+        stats.numFaces             = sceneManager_->numFaces();
+        stats.numBvhNodes          = sceneManager_->numBvhNodes();
+        stats.numMaterials         = sceneManager_->numMaterials();
+        stats.numEmissiveTriangles = sceneManager_->numEmissiveTriangles();
         stats.paused               = paused_;
         stats.complete             = renderer_->isComplete();
         stats.mouseControl         = mouseControlEnabled_;
@@ -196,7 +199,7 @@ void PreviewWindow::mainLoop() {
 
         if (fov != cameraCtrl_.fov()) {
             cameraCtrl_.setFov(fov);
-            renderer_->updateCamera(cameraCtrl_.camera());
+            sceneManager_->updateCamera(cameraCtrl_.camera());
             renderer_->resetAccumulation();
             activeTime = 0.0f;
         }
@@ -208,10 +211,10 @@ void PreviewWindow::mainLoop() {
             paused_ = false;
         }
         if (actions.requestSave) {
-            renderer_->saveImage(renderer_->outputPath());
+            renderer_->saveImage(sceneManager_->outputPath());
         }
         if (actions.requestSaveScene) {
-            renderer_->saveScene(cameraCtrl_.camera());
+            sceneManager_->saveCamera(cameraCtrl_.camera());
         }
         if (actions.toggleMouseControl) {
             mouseControlEnabled_ = !mouseControlEnabled_;

@@ -49,6 +49,7 @@ set(PT_CORE_SOURCES
     src/cuda/cuda_texture.cu
     src/scene/device_scene.cu
     src/scene/scene_loader.cpp
+    src/scene/scene_manager.cpp
     src/film/film.cu
     src/integrators/path.cu
     src/renderer.cu
@@ -84,10 +85,13 @@ set(PT_CORE_HEADERS
     src/samplers/pcg.cuh
     src/samplers/sobol.cuh
     src/samplers/sampler.cuh
+    src/integrators/integrator.h
+    src/integrators/path_integrator.h
     src/integrators/direct_lighting.cuh
     src/film/film.h
     src/scene/scene.h
     src/scene/device_scene.h
+    src/scene/scene_manager.h
     src/io/image_io.h
     src/io/gltf_loader.h
 )

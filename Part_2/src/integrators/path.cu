@@ -21,6 +21,7 @@
 #include "samplers/sampler.cuh"
 #include "integrators/direct_lighting.cuh"
 #include "scene/device_scene.h"
+#include "integrators/path_integrator.h"
 
 namespace pt {
 
@@ -70,7 +71,7 @@ __device__ static vec3 pathTrace(const DeviceSceneView& scene, Sampler& sampler)
                                                scene.vertices, scene.faces);
 
         if (!si.hit) {
-            vec3 env = sampleEnvironmentRadiance(scene.hdrTex, ray.direction);
+            vec3 env = sampleEnvironmentRadiance(scene.lights.hdrTex, ray.direction);
             if (env != vec3(0.0f)) {
                 float misWeight = 1.0f;
                 if (d > 0 && !lastWasDelta) {
@@ -210,7 +211,7 @@ __global__ static void kernelPathTrace(cudaSurfaceObject_t surfNew,
                                        DeviceSceneView scene) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
-    if (x >= scene.width || y >= scene.height) return;
+    if (x >= d_params.width || y >= d_params.height) return;
 
     vec3 acc(0.0f, 0.0f, 0.0f);
     for (int i = 0; i < d_params.samplePerFrame; ++i) {
@@ -240,15 +241,15 @@ __global__ static void kernelPathTrace(cudaSurfaceObject_t surfNew,
     surf2Dwrite(accSample, surfAcc, byteOffset, y);
 }
 
-void launchPathTraceKernel(cudaSurfaceObject_t surfNew,
-                           cudaSurfaceObject_t surfAcc,
-                           const DeviceSceneView& scene,
-                           const SceneParams& params) {
+void PathIntegrator::launch(cudaSurfaceObject_t surfNew,
+                            cudaSurfaceObject_t surfAcc,
+                            const DeviceSceneView& scene,
+                            const SceneParams& params) {
     CUDA_CHECK(cudaMemcpyToSymbol(d_params, &params, sizeof(SceneParams)));
 
     dim3 block(BlockSizeX, BlockSizeY);
-    dim3 grid((scene.width + block.x - 1) / block.x,
-              (scene.height + block.y - 1) / block.y);
+    dim3 grid((params.width + block.x - 1) / block.x,
+              (params.height + block.y - 1) / block.y);
     kernelPathTrace<<<grid, block>>>(surfNew, surfAcc, scene);
     CUDA_CHECK_LAST();
 }

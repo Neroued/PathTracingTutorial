@@ -26,23 +26,7 @@ struct SceneParams {
     int    samplerType;   // 0 = PCG, 1 = Sobol
 };
 
-struct DeviceSceneView {
-    int               width;
-    int               height;
-    uint32_t          frameCount;
-
-    const Vertex*        vertices;
-    uint32_t             numVertices;
-
-    const TriangleFace*  faces;
-    uint32_t             numFaces;
-
-    const Material*   materials;
-    uint32_t          numMaterials;
-
-    const BVHNode*    bvhNodes;
-    uint32_t          numBvhNodes;
-
+struct DeviceLightView {
     const EmissiveTriangleRef* emissiveTriangles;
     uint32_t          numEmissiveTriangles;
 
@@ -57,11 +41,29 @@ struct DeviceSceneView {
 
     cudaTextureObject_t  hdrTex;
 
+    const PunctualLight*       punctualLights;
+    uint32_t                   numPunctualLights;
+};
+
+struct DeviceSceneView {
+    uint32_t          frameCount;
+
+    const Vertex*        vertices;
+    uint32_t             numVertices;
+
+    const TriangleFace*  faces;
+    uint32_t             numFaces;
+
+    const Material*   materials;
+    uint32_t          numMaterials;
+
+    const BVHNode*    bvhNodes;
+    uint32_t          numBvhNodes;
+
     const cudaTextureObject_t* textures;
     uint32_t                   numTextures;
 
-    const PunctualLight*       punctualLights;
-    uint32_t                   numPunctualLights;
+    DeviceLightView   lights;
 };
 
 struct HostScene;
@@ -100,8 +102,6 @@ public:
 
     DeviceSceneView view() const {
         DeviceSceneView v{};
-        v.width        = camera.width;
-        v.height       = camera.height;
         v.frameCount   = frameCount;
         v.vertices     = vertices.data();
         v.numVertices  = static_cast<uint32_t>(vertices.size());
@@ -111,20 +111,20 @@ public:
         v.numMaterials = static_cast<uint32_t>(materials.size());
         v.bvhNodes     = bvhNodes.data();
         v.numBvhNodes  = static_cast<uint32_t>(bvhNodes.size());
-        v.emissiveTriangles    = emissiveTriangles.data();
-        v.numEmissiveTriangles = static_cast<uint32_t>(emissiveTriangles.size());
-        v.triangleLightPmf     = triangleLightPmf.data();
-        v.triangleAlias        = triangleAlias.data();
-        v.envPmf               = envPmf.data();
-        v.envAlias             = envAlias.data();
-        v.numEnvTexels         = static_cast<uint32_t>(envPmf.size());
-        v.envWidth             = envWidth;
-        v.envHeight            = envHeight;
-        v.hdrTex               = hdrTexture.handle();
         v.textures             = textureHandles.data();
         v.numTextures          = static_cast<uint32_t>(textureHandles.size());
-        v.punctualLights       = punctualLights.data();
-        v.numPunctualLights    = static_cast<uint32_t>(punctualLights.size());
+        v.lights.emissiveTriangles    = emissiveTriangles.data();
+        v.lights.numEmissiveTriangles = static_cast<uint32_t>(emissiveTriangles.size());
+        v.lights.triangleLightPmf    = triangleLightPmf.data();
+        v.lights.triangleAlias       = triangleAlias.data();
+        v.lights.envPmf              = envPmf.data();
+        v.lights.envAlias            = envAlias.data();
+        v.lights.numEnvTexels        = static_cast<uint32_t>(envPmf.size());
+        v.lights.envWidth            = envWidth;
+        v.lights.envHeight           = envHeight;
+        v.lights.hdrTex              = hdrTexture.handle();
+        v.lights.punctualLights      = punctualLights.data();
+        v.lights.numPunctualLights   = static_cast<uint32_t>(punctualLights.size());
         return v;
     }
 };

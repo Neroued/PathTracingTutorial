@@ -10,20 +10,20 @@
 namespace pt {
 
 __device__ inline float environmentPdf(const DeviceSceneView& scene, const vec3& direction) {
-    if (scene.hdrTex == 0 || scene.envPmf == nullptr || scene.numEnvTexels == 0 ||
-        scene.envWidth <= 0 || scene.envHeight <= 0) {
+    if (scene.lights.hdrTex == 0 || scene.lights.envPmf == nullptr || scene.lights.numEnvTexels == 0 ||
+        scene.lights.envWidth <= 0 || scene.lights.envHeight <= 0) {
         return 0.0f;
     }
 
     vec2 uv = sampleSphericalMap(direction);
-    int x = static_cast<int>(pt::clamp(uv.x * scene.envWidth,  0.0f, static_cast<float>(scene.envWidth  - 1)));
-    int y = static_cast<int>(pt::clamp(uv.y * scene.envHeight, 0.0f, static_cast<float>(scene.envHeight - 1)));
+    int x = static_cast<int>(pt::clamp(uv.x * scene.lights.envWidth,  0.0f, static_cast<float>(scene.lights.envWidth  - 1)));
+    int y = static_cast<int>(pt::clamp(uv.y * scene.lights.envHeight, 0.0f, static_cast<float>(scene.lights.envHeight - 1)));
 
     float sinTheta = pt::sqrt(pt::max(0.0f, 1.0f - direction.y * direction.y));
     if (sinTheta <= 1e-5f) return 0.0f;
 
-    int idx = y * scene.envWidth + x;
-    return scene.envPmf[idx] * static_cast<float>(scene.envWidth * scene.envHeight) / (TwoPi * Pi * sinTheta);
+    int idx = y * scene.lights.envWidth + x;
+    return scene.lights.envPmf[idx] * static_cast<float>(scene.lights.envWidth * scene.lights.envHeight) / (TwoPi * Pi * sinTheta);
 }
 
 __device__ inline float emissiveTrianglePdf(const DeviceSceneView& scene,
@@ -31,11 +31,11 @@ __device__ inline float emissiveTrianglePdf(const DeviceSceneView& scene,
                                             float distance,
                                             const vec3& direction) {
     if (primitiveId < 0 || primitiveId >= static_cast<int>(scene.numFaces) ||
-        scene.triangleLightPmf == nullptr) {
+        scene.lights.triangleLightPmf == nullptr) {
         return 0.0f;
     }
 
-    float selectPmf = scene.triangleLightPmf[primitiveId];
+    float selectPmf = scene.lights.triangleLightPmf[primitiveId];
     if (selectPmf <= 0.0f) return 0.0f;
 
     const TriangleFace& face = scene.faces[primitiveId];
